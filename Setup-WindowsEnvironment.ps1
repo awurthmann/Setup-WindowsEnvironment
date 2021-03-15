@@ -22,9 +22,10 @@
 # --------------------------------------------------------------------------------------------
 
 Param (
+	#[bool]$ConfirmEnableRDP=$True,
 	[bool]$ConfirmWindowsFirewallControl=$True,
-	[bool]$ConfirmDisableCortana=True,
-	[bool]$ConfirmDisableOneDrive=True,
+	[bool]$ConfirmDisableCortana=$True,
+	[bool]$ConfirmDisableOneDrive=$True,
 	[bool]$ConfirmUnusedServices=$True,
 	[bool]$ConfirmOptionalApps=$True,
 	[bool]$ConfirmEncryptDesktop=$True
@@ -134,27 +135,42 @@ function Disable-RemoteAssistance {
 }
 
 function Disable-OneDrive {
-	Write-Host "Disabling OneDrive..." -ForegroundColor Green
-	If (!(Test-Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive")){
-		New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive" | Out-Null}
-	Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive" -Name "DisableFileSyncNGSC" -Type DWord -Value 1
-    Write-Host "Uninstalling OneDrive..."
-	Stop-Process -Name "OneDrive" -ErrorAction SilentlyContinue
-	Start-Sleep -s 2
-	$onedrive = "$env:SYSTEMROOT\SysWOW64\OneDriveSetup.exe"
-	If (!(Test-Path $onedrive)) {$onedrive = "$env:SYSTEMROOT\System32\OneDriveSetup.exe"}
-	Start-Process $onedrive "/uninstall" -NoNewWindow -Wait
-	Start-Sleep -s 2
-	Stop-Process -Name "explorer" -ErrorAction SilentlyContinue
-	Start-Sleep -s 2
-	Remove-Item -Path "$env:USERPROFILE\OneDrive" -Force -Recurse -ErrorAction SilentlyContinue
-	Remove-Item -Path "$env:LOCALAPPDATA\Microsoft\OneDrive" -Force -Recurse -ErrorAction SilentlyContinue
-	Remove-Item -Path "$env:PROGRAMDATA\Microsoft OneDrive" -Force -Recurse -ErrorAction SilentlyContinue
-	Remove-Item -Path "$env:SYSTEMDRIVE\OneDriveTemp" -Force -Recurse -ErrorAction SilentlyContinue
-	If (!(Test-Path "HKCR:")) {New-PSDrive -Name HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT | Out-Null}
-	Remove-Item -Path "HKCR:\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" -Recurse -ErrorAction SilentlyContinue
-	Remove-Item -Path "HKCR:\Wow6432Node\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" -Recurse -ErrorAction SilentlyContinue
-	$wshell.Popup("Operation Completed",0,"Done",0x0)
+	Param ([bool]$Confirm=$True)
+	
+	If ($Confirm) {
+		$disableOneDrive=$False
+		Write-Host ""
+		$msg="Do you want to disable OneDrive, [Y]es, [N]o"
+		choice /c yn /m $msg
+		switch ($LASTEXITCODE){
+			1 {$disableOneDrive=$True}
+			2 {$disableOneDrive=$False}
+		}
+	}
+	Else {$disableOneDrive=$True}
+	
+	If ($disableOneDrive) {
+		Write-Host "Disabling OneDrive..." -ForegroundColor Green
+		If (!(Test-Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive")){
+			New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive" | Out-Null}
+		Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive" -Name "DisableFileSyncNGSC" -Type DWord -Value 1
+		Write-Host "Uninstalling OneDrive..."
+		Stop-Process -Name "OneDrive" -ErrorAction SilentlyContinue
+		Start-Sleep -s 2
+		$onedrive = "$env:SYSTEMROOT\SysWOW64\OneDriveSetup.exe"
+		If (!(Test-Path $onedrive)) {$onedrive = "$env:SYSTEMROOT\System32\OneDriveSetup.exe"}
+		Start-Process $onedrive "/uninstall" -NoNewWindow -Wait
+		Start-Sleep -s 2
+		Stop-Process -Name "explorer" -ErrorAction SilentlyContinue
+		Start-Sleep -s 2
+		Remove-Item -Path "$env:USERPROFILE\OneDrive" -Force -Recurse -ErrorAction SilentlyContinue
+		Remove-Item -Path "$env:LOCALAPPDATA\Microsoft\OneDrive" -Force -Recurse -ErrorAction SilentlyContinue
+		Remove-Item -Path "$env:PROGRAMDATA\Microsoft OneDrive" -Force -Recurse -ErrorAction SilentlyContinue
+		Remove-Item -Path "$env:SYSTEMDRIVE\OneDriveTemp" -Force -Recurse -ErrorAction SilentlyContinue
+		If (!(Test-Path "HKCR:")) {New-PSDrive -Name HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT | Out-Null}
+		Remove-Item -Path "HKCR:\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" -Recurse -ErrorAction SilentlyContinue
+		Remove-Item -Path "HKCR:\Wow6432Node\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" -Recurse -ErrorAction SilentlyContinue
+	}
 }
 
 function Set-WindowsExplorerView {
@@ -188,10 +204,15 @@ function Enable-RDP {
 	$ScriptBlock = [System.Management.Automation.ScriptBlock]::Create($installScript)
 	$ScriptArgs=@($False,$True)
 	Invoke-Command $ScriptBlock -ArgumentList $ScriptArgs
+	
+	$netProfile=(Get-NetConnectionProfile).NetworkCategory
+	If ($netProfile) {Set-NetFirewallProfile -Name $netProfile -AllowInboundRules True}
 }
 
 function Install-Choco {
-	Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+	Set-ExecutionPolicy Bypass -Scope Process -Force
+	[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+	iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 }
 
 function Install-BaseApps {
@@ -217,14 +238,30 @@ function Install-BaseApps {
 }
 
 function Install-WindowsFirewallControl {
-	$autoHotKeyInstalled=((choco list autohotkey.portable --localonly | Select-String "installed.").ToString().Trim()[0])
-	if (($autoHotKeyInstalled -eq "0") -or ($autoHotKeyInstalled -eq 0)) {$removeAutoHotKey=$True}
+	Param ([bool]$Confirm=$True)
 	
-	choco install windowsfirewallcontrol -y
-	
-	If ($removeAutoHotKey){
+	If ($Confirm) {
+		$installWFC=$False
+		Write-Host ""
+		$msg="Do you want to install Windows Firewall Control, [Y]es, [N]o"
+		choice /c yn /m $msg
+		switch ($LASTEXITCODE){
+			1 {$installWFC=$True}
+			2 {$installWFC=$False}
+		}
+	}
+	Else {$installWFC=$True}
+
+	If ($installWFC){
 		$autoHotKeyInstalled=((choco list autohotkey.portable --localonly | Select-String "installed.").ToString().Trim()[0])
-		if (($autoHotKeyInstalled -ne "0") -and ($autoHotKeyInstalled -ne 0)) {choco uninstall autohotkey.portable -force}
+		if (($autoHotKeyInstalled -eq "0") -or ($autoHotKeyInstalled -eq 0)) {$removeAutoHotKey=$True}
+		
+		choco install windowsfirewallcontrol -y
+		
+		If ($removeAutoHotKey){
+			$autoHotKeyInstalled=((choco list autohotkey.portable --localonly | Select-String "installed.").ToString().Trim()[0])
+			if (($autoHotKeyInstalled -ne "0") -and ($autoHotKeyInstalled -ne 0)) {choco uninstall autohotkey.portable -force}
+		}
 	}
 }
 
@@ -245,7 +282,7 @@ function Install-OptionalApps {
 	}
 	$installApps=@()
 	
-	ForEach ($key in $optionalApps.keys) {
+	:foreach ForEach ($key in $optionalApps.keys) {
 		
 		If($Confirm){
 			$msg="Install $($optionalApps[$key]), [Y]es, [N]o, [A]ll, [Q]uit/None"
@@ -263,11 +300,11 @@ function Install-OptionalApps {
 					$msg="Install all, [Y]es, [N]o"
 					choice /c yn /m $msg
 					switch($LASTEXITCODE){
-						1 {$installApps = $optionalApps.keys; break loop}
-						2 {break}
+						1 {$installApps = $optionalApps.keys; break foreach}
+						2 {break foreach}
 					}
 				}
-				4 {break loop}
+				4 {break foreach}
 			}
 		}
 		
@@ -377,24 +414,40 @@ function Disable-EdgeDefaults {
 }
 
 function Disable-Cortana {
-	Write-Host "Disabling Cortana..." -ForegroundColor Green
-	If (!(Test-Path "HKCU:\SOFTWARE\Microsoft\Personalization\Settings")) {
-		New-Item -Path "HKCU:\SOFTWARE\Microsoft\Personalization\Settings" -Force | Out-Null
+	Param ([bool]$Confirm=$True)
+	
+	If ($Confirm) {
+		$disableCortana=$False
+		Write-Host ""
+		$msg="Do you want to disable Cortana, [Y]es, [N]o"
+		choice /c yn /m $msg
+		switch ($LASTEXITCODE){
+			1 {$disableCortana=$True}
+			2 {$disableCortana=$False}
+		}
 	}
-	Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Personalization\Settings" -Name "AcceptedPrivacyPolicy" -Type DWord -Value 0
-	If (!(Test-Path "HKCU:\SOFTWARE\Microsoft\InputPersonalization")) {
-		New-Item -Path "HKCU:\SOFTWARE\Microsoft\InputPersonalization" -Force | Out-Null
+	Else {$disableCortana=$True}
+
+	If ($disableCortana) {
+		Write-Host "Disabling Cortana..." -ForegroundColor Green
+		If (!(Test-Path "HKCU:\SOFTWARE\Microsoft\Personalization\Settings")) {
+			New-Item -Path "HKCU:\SOFTWARE\Microsoft\Personalization\Settings" -Force | Out-Null
+		}
+		Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Personalization\Settings" -Name "AcceptedPrivacyPolicy" -Type DWord -Value 0
+		If (!(Test-Path "HKCU:\SOFTWARE\Microsoft\InputPersonalization")) {
+			New-Item -Path "HKCU:\SOFTWARE\Microsoft\InputPersonalization" -Force | Out-Null
+		}
+		Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\InputPersonalization" -Name "RestrictImplicitTextCollection" -Type DWord -Value 1
+		Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\InputPersonalization" -Name "RestrictImplicitInkCollection" -Type DWord -Value 1
+		If (!(Test-Path "HKCU:\SOFTWARE\Microsoft\InputPersonalization\TrainedDataStore")) {
+			New-Item -Path "HKCU:\SOFTWARE\Microsoft\InputPersonalization\TrainedDataStore" -Force | Out-Null
+		}
+		Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\InputPersonalization\TrainedDataStore" -Name "HarvestContacts" -Type DWord -Value 0
+		If (!(Test-Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search")) {
+			New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Force | Out-Null
+		}
+		Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Name "AllowCortana" -Type DWord -Value 0
 	}
-	Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\InputPersonalization" -Name "RestrictImplicitTextCollection" -Type DWord -Value 1
-	Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\InputPersonalization" -Name "RestrictImplicitInkCollection" -Type DWord -Value 1
-	If (!(Test-Path "HKCU:\SOFTWARE\Microsoft\InputPersonalization\TrainedDataStore")) {
-		New-Item -Path "HKCU:\SOFTWARE\Microsoft\InputPersonalization\TrainedDataStore" -Force | Out-Null
-	}
-	Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\InputPersonalization\TrainedDataStore" -Name "HarvestContacts" -Type DWord -Value 0
-	If (!(Test-Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search")) {
-		New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Force | Out-Null
-	}
-	Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Name "AllowCortana" -Type DWord -Value 0
 }
 
 function Disable-UnusedServices {
@@ -420,7 +473,7 @@ function Disable-UnusedServices {
 	}
 	$disableSvcs=@()
 	
-	ForEach ($key in $targetedSvcs.keys) {
+	:foreach ForEach ($key in $targetedSvcs.keys) {
 		
 		If($Confirm){
 			$msg="Disable $($targetedSvcs[$key]), [Y]es, [N]o, [A]ll, [Q]uit/None"
@@ -438,11 +491,11 @@ function Disable-UnusedServices {
 					$msg="Disable all, [Y]es, [N]o"
 					choice /c yn /m $msg
 					switch($LASTEXITCODE){
-						1 {$disableSvcs = $targetedSvcs.keys; break loop}
-						2 {break}
+						1 {$disableSvcs = $targetedSvcs.keys; break foreach}
+						2 {break foreach}
 					}
 				}
-				4 {break loop}
+				4 {break foreach}
 			}
 		}
 		
@@ -473,8 +526,9 @@ function Set-SecuritySettings {
 	Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "ConsentPromptBehaviorAdmin" -Type DWord -Value 5
 	Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "PromptOnSecureDesktop" -Type DWord -Value 1
     
-	Write-Host "Disabling SMB 1.0 protocol..."
+	Write-Host "Disabling SMB 1.0 & 2.0 Protocol..."
 	Set-SmbServerConfiguration -EnableSMB1Protocol $false -Force
+	Set-SmbServerConfiguration -EnableSMB2Protocol $false -Force
     
 	Write-Host "Enabling Windows Defender Cloud..." -ForegroundColor Green
 	Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Spynet" -Name "SpynetReporting" -ErrorAction SilentlyContinue
@@ -487,6 +541,22 @@ function Set-SecuritySettings {
 	If (!(Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\QualityCompat")) {
 		New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\QualityCompat" | Out-Null}
 	Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\QualityCompat" -Name "cadca5fe-87d3-4b96-b7fb-a231484277cc" -Type DWord -Value 0
+
+	Write-Host "Firewall: Block All Incoming Connections..." -ForegroundColor Green
+	ForEach ($profileName in $((Get-NetFirewallProfile).Name)) {
+		Set-NetFirewallProfile -Name $profileName -AllowInboundRules False
+	}
+	
+	Write-Host "Enabling Reputation-based Protection..." -ForegroundColor Green
+	Set-MpPreference -PUAProtection Enabled
+	
+	Write-Host "Disable NetBIOS On All Present Adapters..." -ForegroundColor Green
+	$i = 'HKLM:\SYSTEM\CurrentControlSet\Services\netbt\Parameters\interfaces'  
+	Get-ChildItem $i | ForEach-Object {  
+		Set-ItemProperty -Path "$i\$($_.pschildname)" -name NetBiosOptions -value 2
+	}
+	(Get-WmiObject Win32_NetworkAdapterConfiguration -Filter IpEnabled="true").SetTcpipNetbios(2)#Likely not necessary
+	
 }
 
 function Encrypt-System {
@@ -504,12 +574,10 @@ function Encrypt-System {
 			}
 		}
 	}
-	Else {
-		$Encrypt=$True
-	}
+	Else {$Encrypt=$True}
 	
 	If ($Encrypt){
-		
+		"Encrypt Drive"
 	}
 }
 
@@ -527,54 +595,24 @@ If(isAdmin) {
 	Disable-RemoteAssistance
 	Set-WindowsExplorerView 
 	Disable-CapsLock
-	Enable-RDP	#TD: Comeback to this one, maybe it should be full script with options
 	Install-Choco
 	Install-BaseApps
-	Install-WindowsFirewallControl#TD: Make Confirmable
+	Install-WindowsFirewallControl $ConfirmWindowsFirewallControl
 	Install-OptionalApps $ConfirmOptionalApps
 	Remove-UnwantedApps
 	Disable-EdgeDefaults
 	Set-SecuritySettings
 	Disable-UnusedServices $ConfirmUnusedServices
+	Disable-OneDrive $ConfirmDisableOneDrive
+	Disable-Cortana $ConfirmDisableCortana
+	Enable-RDP	#TD: Comeback to this one, maybe it should be full script with options
 	Remove-Links
 	Encrypt-System $ConfirmEncryptDesktop
-	
-	#TD: Determine how you want to prompt for confirm
-	
-	# [bool]$ConfirmWindowsFirewallControl=$True,
-	# [bool]$ConfirmDisableCortana=True,
-	# [bool]$ConfirmDisableOneDrive=True,
-	# [bool]$ConfirmUnusedServices=$True,
-	# [bool]$ConfirmOptionalApps=$True
-	
-	
-	
-	If ($Silent) {
-		If ($DisableCortana) {Disable-Cortana}#Confirmable
-		If ($DisableOneDrive) {Disable-OneDrive}#Confirmable
-	}
-	Else {
-		Write-Host ""
-		$msg="Do you want to uninstall OneDrive, [Y]es, [N]o"
-		choice /c yn /m $msg
-		switch ($LASTEXITCODE){
-			1 {Disable-OneDrive}
-			2 {break}
-		}
-		
-		Write-Host ""
-		$msg="Do you want to remove Cortana, [Y]es, [N]o"
-		choice /c yn /m $msg
-		switch ($LASTEXITCODE){
-			1 {Disable-Cortana}
-			2 {break}
-		}
-	}
 	
 	Write-Host "Complete" -ForegroundColor Cyan
 }
 Else {
-	Write-Error -Message "
-ERROR: Administrator permissions are required to make requested changes." -Category PermissionDenied
+	Write-Host ""
+	Write-Error -Message "ERROR: Administrator permissions are required to make requested changes." -Category PermissionDenied
 }
 ##End Main##

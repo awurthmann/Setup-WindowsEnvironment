@@ -226,7 +226,7 @@ function Enable-RDP {
 	$ScriptArgs=@($False,$True)
 	Invoke-Command $ScriptBlock -ArgumentList $ScriptArgs
 	
-	$netProfile=(Get-NetConnectionProfile).NetworkCategory
+	[string]$netProfile=(Get-NetConnectionProfile).NetworkCategory
 	If ($netProfile) {Set-NetFirewallProfile -Name $netProfile -AllowInboundRules True}
 }
 
@@ -651,11 +651,11 @@ If($localAdmin -and $internetAccess) {
 	Install-OptionalApps $ConfirmOptionalApps
 	Remove-UnwantedApps
 	Disable-EdgeDefaults
-	Set-SecuritySettings
+	Set-SecuritySettings #TD: Troubleshoot Apps Protection
 	Disable-UnusedServices $ConfirmUnusedServices
 	Disable-OneDrive $ConfirmDisableOneDrive
 	Disable-Cortana $ConfirmDisableCortana
-	Enable-RDP	#TD: Comeback to this one, maybe it should be full script with options
+	Enable-RDP	#TD: Troubleshoot
 	Remove-Links
 	Encrypt-System $ConfirmEncryptDesktop
 	

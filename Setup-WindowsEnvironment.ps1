@@ -225,9 +225,6 @@ function Enable-RDP {
 	$ScriptBlock = [System.Management.Automation.ScriptBlock]::Create($installScript)
 	$ScriptArgs=@($False,$True)
 	Invoke-Command $ScriptBlock -ArgumentList $ScriptArgs
-	
-	[string]$netProfile=(Get-NetConnectionProfile).NetworkCategory
-	If ($netProfile) {Set-NetFirewallProfile -Name $netProfile -AllowInboundRules True}
 }
 
 function Install-Choco {
@@ -586,6 +583,7 @@ function Set-SecuritySettings {
 	Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\QualityCompat" -Name "cadca5fe-87d3-4b96-b7fb-a231484277cc" -Type DWord -Value 0
 
 	Write-Host "Firewall: Block All Incoming Connections..." -ForegroundColor Green
+	Set-NetFirewallProfile -All -Enabled True
 	ForEach ($profileName in $((Get-NetFirewallProfile).Name)) {
 		Set-NetFirewallProfile -Name $profileName -AllowInboundRules False
 	}
@@ -651,11 +649,11 @@ If($localAdmin -and $internetAccess) {
 	Install-OptionalApps $ConfirmOptionalApps
 	Remove-UnwantedApps
 	Disable-EdgeDefaults
-	Set-SecuritySettings #TD: Troubleshoot Apps Protection
+	Set-SecuritySettings
+	Enable-RDP
 	Disable-UnusedServices $ConfirmUnusedServices
 	Disable-OneDrive $ConfirmDisableOneDrive
 	Disable-Cortana $ConfirmDisableCortana
-	Enable-RDP	#TD: Troubleshoot
 	Remove-Links
 	Encrypt-System $ConfirmEncryptDesktop
 	

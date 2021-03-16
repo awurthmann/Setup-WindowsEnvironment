@@ -9,8 +9,8 @@
 #
 # --------------------------------------------------------------------------------------------
 # Name: Setup-WindowsEnvironment.ps1
-# Version: 2021.03.12.101001
-# Description: Setup Windows Enviroment on new System
+# Version: 2021.03.15.173401
+# Description: Setup Windows Enviroment on my Test System
 # 
 # Instructions: Run from PowerShell with Administrator permissions and Set-ExecutionPolicy Bypass -Scope Process -Force
 #	

@@ -5,17 +5,21 @@
 #
 # You the executor, runner, user accept all liability.
 # This code comes with ABSOLUTELY NO WARRANTY.
-# You may redistribute copies of the code under the terms of the GPL v3.
+# This is free and unencumbered software released into the public domain.
+# Anyone is free to copy, modify, publish, use, compile, sell, or
+# distribute this software, either in source code form or as a compiled
+# binary, for any purpose, commercial or non-commercial, and by any
+# means.
 #
 # --------------------------------------------------------------------------------------------
 # Name: Setup-WindowsEnvironment.ps1
-# Version: 2021.03.15.173401
-# Description: Setup Windows Enviroment on my Test System
+# Version: 2021.03.16.112701
+# Description: Setup Windows Enviroment on my Test System(s)
 # 
 # Instructions: Run from PowerShell with Administrator permissions and Set-ExecutionPolicy Bypass -Scope Process -Force
 #	
 # Tested with: Microsoft Windows [Version 10.0.19042.804], PowerShell [Version 5.1.19041.610]
-# Arguments: None
+# Arguments: See Params Below
 # Output: Standard Out
 #
 # Notes:  

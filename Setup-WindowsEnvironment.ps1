@@ -209,6 +209,9 @@ function Set-WindowsExplorerView {
 	Write-Host "Showing all tray icons..." -ForegroundColor Green
 	Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "EnableAutoTray" -Type DWord -Value 0
 	
+	Write-Host "Showing Search icon..." -ForegroundColor Green
+	Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Search" -Name "SearchboxTaskbarMode " -Type DWord -Value 1
+	
 	Write-Host "Enabling Dark Mode" -ForegroundColor Green
 	Set-ItemProperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize -Name AppsUseLightTheme -Value 0
 }
@@ -646,7 +649,6 @@ If($localAdmin -and $internetAccess) {
 	Disable-AdTargeting
 	Disable-WindowsP2PUpdates
 	Disable-RemoteAssistance
-	Set-WindowsExplorerView 
 	Disable-CapsLock
 	Install-Choco
 	Install-BaseApps
@@ -659,6 +661,7 @@ If($localAdmin -and $internetAccess) {
 	Disable-UnusedServices $ConfirmUnusedServices
 	Disable-OneDrive $ConfirmDisableOneDrive
 	Disable-Cortana $ConfirmDisableCortana
+	Set-WindowsExplorerView 
 	Remove-Links
 	Encrypt-System $ConfirmEncryptDesktop
 	

@@ -13,7 +13,7 @@
 #
 # --------------------------------------------------------------------------------------------
 # Name: Setup-WindowsEnvironment.ps1
-# Version: 2021.03.16.112701
+# Version: 2021.03.16.151601
 # Description: Setup Windows Enviroment on my Test System(s)
 # 
 # Instructions: Run from PowerShell with Administrator permissions and Set-ExecutionPolicy Bypass -Scope Process -Force
@@ -210,7 +210,15 @@ function Set-WindowsExplorerView {
 	Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "EnableAutoTray" -Type DWord -Value 0
 	
 	Write-Host "Showing Search icon..." -ForegroundColor Green
-	Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Search" -Name "SearchboxTaskbarMode " -Type DWord -Value 1
+	Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Search" -Name "SearchboxTaskbarMode" -Type DWord -Value 1
+	
+	Write-Host "Setting Desktop to Dark Gray..." -ForegroundColor Green
+	Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name 'WallPaper' -Value ''
+	Set-ItemProperty -Path 'HKCU:\Control Panel\Colors' -Name 'Background' -Value '76 74 72'
+	
+	Write-Host "Removing Microsoft Store icon..." -ForegroundColor Green
+	$appname = "Microsoft Store"
+	((New-Object -Com Shell.Application).NameSpace('shell:::{4234d49b-0245-4df3-b780-3893943456e1}').Items() | ?{$_.Name -eq $appname}).Verbs() | ?{$_.Name.replace('&','') -match 'Unpin from taskbar'} | %{$_.DoIt(); $exec = $true}
 	
 	Write-Host "Enabling Dark Mode" -ForegroundColor Green
 	Set-ItemProperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize -Name AppsUseLightTheme -Value 0
@@ -248,7 +256,6 @@ function Install-BaseApps {
 	$baseApps = @(
 		"7zip.install",
 		"choco-upgrade-all-at-startup",
-		"discord",
 		"firefox",
 		"googlechrome",
 		"microsoft-edge",
@@ -310,7 +317,8 @@ function Install-OptionalApps {
 		"python"="Python 3";
 		"visualstudio2019-workload-python"="Python support in Visual Studio";
 		"steam-client"="Steam";
-		"goggalaxy"="GOG Galaxy"
+		"goggalaxy"="GOG Galaxy";
+		"discord"="Discord"
 	}
 	$installApps=@()
 	

@@ -22,13 +22,14 @@
 # --------------------------------------------------------------------------------------------
 
 Param (
-	#[bool]$ConfirmEnableRDP=$True,
+	[bool]$EnableRDP=$True,
 	[bool]$ConfirmWindowsFirewallControl=$True,
 	[bool]$ConfirmDisableCortana=$True,
 	[bool]$ConfirmDisableOneDrive=$True,
 	[bool]$ConfirmUnusedServices=$True,
 	[bool]$ConfirmOptionalApps=$True,
-	[bool]$ConfirmEncryptDesktop=$True
+	[bool]$ConfirmEncryptDesktop=$True,
+	[bool]$ConfirmRestart=$True
 )
 
 function isAdmin {
@@ -158,7 +159,7 @@ function Disable-OneDrive {
 	If ($Confirm) {
 		$disableOneDrive=$False
 		Write-Host ""
-		$msg="Do you want to disable OneDrive, [Y]es, [N]o"
+		$msg="Do you want to disable OneDrive, [Y]Yes, [N]No"
 		choice /c yn /m $msg
 		switch ($LASTEXITCODE){
 			1 {$disableOneDrive=$True}
@@ -265,7 +266,7 @@ function Install-WindowsFirewallControl {
 	If ($Confirm) {
 		$installWFC=$False
 		Write-Host ""
-		$msg="Do you want to install Windows Firewall Control, [Y]es, [N]o"
+		$msg="Do you want to install Windows Firewall Control, [Y]Yes, [N]No"
 		choice /c yn /m $msg
 		switch ($LASTEXITCODE){
 			1 {$installWFC=$True}
@@ -309,7 +310,7 @@ function Install-OptionalApps {
 	:foreach ForEach ($key in $optionalApps.keys) {
 		
 		If($Confirm){
-			$msg="Install $($optionalApps[$key]), [Y]es, [N]o, [A]ll, [Q]uit/None"
+			$msg="Install $($optionalApps[$key]), [Y]Yes, [N]No, [A]All, [Q]Quit/None"
 			choice /c ynaq /m $msg
 			
 			switch($LASTEXITCODE){
@@ -321,7 +322,7 @@ function Install-OptionalApps {
 					Write-Host "Do you want to install ALL optional applications:" -ForegroundColor Yellow
 					Write-Host "    Note: You may have previously indicated No. 'All' overrides previous choices" -ForegroundColor Yellow
 					$optionalApps.values
-					$msg="Install all, [Y]es, [N]o"
+					$msg="Install all, [Y]Yes, [N]No"
 					choice /c yn /m $msg
 					switch($LASTEXITCODE){
 						1 {$installApps = $optionalApps.keys; break foreach}
@@ -360,6 +361,7 @@ function Remove-UnwantedApps {
         "Microsoft.NetworkSpeedTest"
         "Microsoft.News"
         "Microsoft.Office.Lens"
+		"Microsoft.Office.OneNote"
         "Microsoft.Office.Sway"
         "Microsoft.OneConnect"
         "Microsoft.People"
@@ -409,7 +411,7 @@ function Remove-UnwantedApps {
     foreach ($App in $UnwantedApps) {
         Get-AppxPackage -Name $App| Remove-AppxPackage
         Get-AppxProvisionedPackage -Online | Where-Object DisplayName -like $App | Remove-AppxProvisionedPackage -Online
-        Write-Host "Trying to remove $App."
+        Write-Host "If present, removing $App." -ForegroundColor DarkGreen
     }
 	
 }
@@ -451,7 +453,7 @@ function Disable-Cortana {
 	If ($Confirm) {
 		$disableCortana=$False
 		Write-Host ""
-		$msg="Do you want to disable Cortana, [Y]es, [N]o"
+		$msg="Do you want to disable Cortana, [Y]Yes, [N]No"
 		choice /c yn /m $msg
 		switch ($LASTEXITCODE){
 			1 {$disableCortana=$True}
@@ -510,7 +512,7 @@ function Disable-UnusedServices {
 	:foreach ForEach ($key in $targetedSvcs.keys) {
 		
 		If($Confirm){
-			$msg="Disable $($targetedSvcs[$key]), [Y]es, [N]o, [A]ll, [Q]uit/None"
+			$msg="Disable $($targetedSvcs[$key]), [Y]Yes, [N]No, [A]All, [Q]Quit/None"
 			choice /c ynaq /m $msg
 			
 			switch($LASTEXITCODE){
@@ -522,7 +524,7 @@ function Disable-UnusedServices {
 					Write-Host "Do you want to disable ALL targeted Windows Services:" -ForegroundColor Yellow
 					Write-Host "    Note: You may have previously indicated No. 'All' overrides previous choices" -ForegroundColor Yellow
 					$targetedSvcs.values
-					$msg="Disable all, [Y]es, [N]o"
+					$msg="Disable all, [Y]Yes, [N]No"
 					choice /c yn /m $msg
 					switch($LASTEXITCODE){
 						1 {$disableSvcs = $targetedSvcs.keys; break foreach}
@@ -538,7 +540,7 @@ function Disable-UnusedServices {
 	
 	If($disableSvcs){
 		foreach ($Svc in $disableSvcs) {
-			Write-Host "Stopping and disabling $($targetedSvcs[$Svc]) service..."
+			Write-Host "Stopping and disabling $($targetedSvcs[$Svc]) service..." -ForegroundColor DarkGreen
 			Stop-Service $Svc -WarningAction SilentlyContinue
 			Set-Service $Svc -StartupType Disabled -WarningAction SilentlyContinue
 		}
@@ -566,7 +568,7 @@ function Set-SecuritySettings {
 	Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "ConsentPromptBehaviorAdmin" -Type DWord -Value 5
 	Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "PromptOnSecureDesktop" -Type DWord -Value 1
     
-	Write-Host "Disabling SMB 1.0 & 2.0 Protocol..."
+	Write-Host "Disabling SMB 1.0 & 2.0 Protocol..." -ForegroundColor Green
 	Set-SmbServerConfiguration -EnableSMB1Protocol $false -Force
 	Set-SmbServerConfiguration -EnableSMB2Protocol $false -Force
     
@@ -584,9 +586,8 @@ function Set-SecuritySettings {
 
 	Write-Host "Firewall: Block All Incoming Connections..." -ForegroundColor Green
 	Set-NetFirewallProfile -All -Enabled True
-	ForEach ($profileName in $((Get-NetFirewallProfile).Name)) {
-		Set-NetFirewallProfile -Name $profileName -AllowInboundRules False
-	}
+	Set-NetFirewallProfile -All -DefaultInboundAction Block
+	Set-NetFirewallProfile -All -AllowInboundRules False
 	
 	Write-Host "Enabling Reputation-based Protection..." -ForegroundColor Green
 	Set-MpPreference -PUAProtection Enabled
@@ -594,9 +595,8 @@ function Set-SecuritySettings {
 	Write-Host "Disable NetBIOS On All Present Adapters..." -ForegroundColor Green
 	$i = 'HKLM:\SYSTEM\CurrentControlSet\Services\netbt\Parameters\interfaces'  
 	Get-ChildItem $i | ForEach-Object {  
-		Set-ItemProperty -Path "$i\$($_.pschildname)" -name NetBiosOptions -value 2
-	}
-	(Get-WmiObject Win32_NetworkAdapterConfiguration -Filter IpEnabled="true").SetTcpipNetbios(2)#Likely not necessary
+		Set-ItemProperty -Path "$i\$($_.pschildname)" -name NetBiosOptions -value 2}
+	(Get-WmiObject Win32_NetworkAdapterConfiguration -Filter IpEnabled="true").SetTcpipNetbios(2) | Out-Null
 	
 }
 
@@ -605,11 +605,11 @@ function Encrypt-System {
 	
 	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Encrypt-System"
 	
-	[bool]$Encrypt=$False
+	[bool]$Encrypt=$True
 	If($Confirm){
 		If((gwmi win32_computersystem -ea 0).pcsystemtype -ne 2){#If Desktop then prompt
 			Write-Host ""
-			$msg="Do you want to encrypt this desktop system, [Y]es, [N]o"
+			$msg="Do you want to encrypt this desktop system, [Y]Yes, [N]No"
 			choice /c yn /m $msg
 			switch ($LASTEXITCODE){
 				1 {$Encrypt=$True;break}
@@ -617,10 +617,11 @@ function Encrypt-System {
 			}
 		}
 	}
-	Else {$Encrypt=$True}
 	
 	If ($Encrypt){
-		"Encrypt Drive"
+		$SystemDrive=[Environment]::GetEnvironmentVariable("SystemDrive")
+		Enable-BitLocker -MountPoint $SystemDrive -EncryptionMethod Aes256 -UsedSpaceOnly -TpmProtector
+		#Lock-BitLocker -MountPoint $SystemDrive
 	}
 }
 
@@ -650,7 +651,7 @@ If($localAdmin -and $internetAccess) {
 	Remove-UnwantedApps
 	Disable-EdgeDefaults
 	Set-SecuritySettings
-	Enable-RDP
+	If ($EnableRDP) {Enable-RDP}
 	Disable-UnusedServices $ConfirmUnusedServices
 	Disable-OneDrive $ConfirmDisableOneDrive
 	Disable-Cortana $ConfirmDisableCortana
@@ -659,6 +660,17 @@ If($localAdmin -and $internetAccess) {
 	
 	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Complete"
 	Write-Host "Complete" -ForegroundColor Cyan
+	
+	If ($ConfirmRestart) {
+		Write-Host ""
+		$msg="Restart computer, [Y]Yes, [N]No"
+		choice /c yn /m $msg
+		switch ($LASTEXITCODE){
+			1 {Restart-Computer}
+			2 {break}
+		}
+	}
+	
 }
 Else {
 	If(!($localAdmin)){

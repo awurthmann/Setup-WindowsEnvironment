@@ -560,8 +560,15 @@ function Disable-UnusedServices {
 			Set-Service $Svc -StartupType Disabled -WarningAction SilentlyContinue
 		}
 	}
-
 	
+	if (($disableSvcs -contains "LanmanWorkstation") -and ($disableSvcs -contains "LanmanServer")) {Disable-WindowsFileSharing}
+	
+}
+
+function Disable-WindowsFileSharing {
+	Write-Host "Disabling Windows File Sharing..." -ForegroundColor DarkGreen
+	Get-NetAdapterBinding -DisplayName "Client for Microsoft Networks" | % {Disable-NetAdapterBinding -Name $_.Name -ComponentID $_.ComponentID}
+	Get-NetAdapterBinding -DisplayName "File and Printer Sharing for Microsoft Networks" | % {Disable-NetAdapterBinding -Name $_.Name -ComponentID $_.ComponentID}
 }
 
 function Remove-Links {
@@ -669,6 +676,7 @@ If($localAdmin -and $internetAccess) {
 	Set-SecuritySettings
 	If ($EnableRDP) {Enable-RDP}
 	Disable-UnusedServices $ConfirmUnusedServices
+	#Disable-WindowsFileSharing #Included in Disable-UnusedServices
 	Disable-OneDrive $ConfirmDisableOneDrive
 	Disable-Cortana $ConfirmDisableCortana
 	Set-WindowsExplorerView 

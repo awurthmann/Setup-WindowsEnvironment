@@ -26,4 +26,5 @@ Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process
  ## What is not working:
  1) Bitlocker isn't as fully automated as I would like, I may revisit this after function after playing with some API calls to PasteBin.
  2) "Block Downloads" under "Reputation-based protection" isn't checked and there doesn't seem to be a registry setting that controls this setting.
+	To enable manually: To turn on potentially unwanted app blocking go to Start  > Settings  > Update & Security > Windows Security > App & browser control > Reputation-based protection settings. Check Block Apps, Check Block downloads
  

@@ -43,7 +43,6 @@ function isAdmin {
 
 function isConnectedToInternet {
 	Param ([string]$RemoteHost="www.google.com")
-	
 	return (Test-NetConnection -ComputerName $RemoteHost -Port 443).TcpTestSucceeded
 }
 
@@ -58,6 +57,7 @@ function Set-Profile {
 	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Set-Profile"
 	Write-Host "Setting Profile..." -ForegroundColor Green
 	iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/awurthmann/my-powershell-profile/main/Set-Profile.ps1'))
+	Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
 }
 
 function Disable-Telemetry {
@@ -756,14 +756,15 @@ If($localAdmin -and $internetAccess) {
 	Remove-UnwantedApps
 	Disable-EdgeDefaults
 	Set-SecuritySettings
-	If ($EnableRDP) {Enable-RDP}
+	Enable-RDP
 	Disable-UnusedServices $ConfirmUnusedServices
 	#Disable-WindowsFileSharing #Included in Disable-UnusedServices
 	Disable-OneDrive $ConfirmDisableOneDrive
 	Disable-Cortana $ConfirmDisableCortana
 	Set-WindowsExplorerView 
 	Remove-Links
-	Encrypt-System $ConfirmEncryptDesktop
+	#Load-StartLayout #Not fully functional/Up to par
+	#Encrypt-System $ConfirmEncryptDesktop #Not fully functional/Up to par
 	
 	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Complete"
 	Write-Host "Complete" -ForegroundColor Cyan

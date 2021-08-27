@@ -235,12 +235,41 @@ function Disable-CapsLock {
 }
 
 function Enable-RDP {
-	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Enable-RDP"
-	Write-Host "Enabling Remote Desktop Connection..." -ForegroundColor Green
-	$installScript=((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/awurthmann/Set-RDP-Connection/main/Set-RDP-Connection.ps1'))
-	$ScriptBlock = [System.Management.Automation.ScriptBlock]::Create($installScript)
-	$ScriptArgs=@($False,$True)
-	Invoke-Command $ScriptBlock -ArgumentList $ScriptArgs
+	
+	Write-Host ""
+	$msg="Do you want to Enable RDP, [Y]Yes, [N]No"
+	choice /c yn /m $msg
+	switch ($LASTEXITCODE){
+		1 {$enableRDP=$True}
+		2 {$enableRDP=$False}
+	}
+	
+	If($enableRDP){
+		Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Enable-RDP"
+		Write-Host "Enabling Remote Desktop Connection..." -ForegroundColor Green
+		$installScript=((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/awurthmann/Set-RDP-Connection/main/Set-RDP-Connection.ps1'))
+		$ScriptBlock = [System.Management.Automation.ScriptBlock]::Create($installScript)
+		$ScriptArgs=@($False,$True)
+		Invoke-Command $ScriptBlock -ArgumentList $ScriptArgs
+	}
+	Else {
+		Write-Host ""
+		$msg="Do you want to Disable RDP, [Y]Yes, [N]No"
+		choice /c yn /m $msg
+		switch ($LASTEXITCODE){
+			1 {$disableRDP=$True}
+			2 {$disableRDP=$False}
+		}
+		
+		If($disableRDP){
+			Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Enable-RDP"
+			Write-Host "Enabling Remote Desktop Connection..." -ForegroundColor Green
+			$installScript=((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/awurthmann/Set-RDP-Connection/main/Set-RDP-Connection.ps1'))
+			$ScriptBlock = [System.Management.Automation.ScriptBlock]::Create($installScript)
+			$ScriptArgs=@($False,$False)
+			Invoke-Command $ScriptBlock -ArgumentList $ScriptArgs	
+		}
+	}
 }
 
 function Install-Choco {
@@ -351,7 +380,7 @@ function Install-OptionalApps {
 		Else {$installApps = $optionalApps.keys}
 	}
 	
-	If($installApps){choco instal $installApps -y}
+	If($installApps){choco install $installApps -y}
 	
 }
 

@@ -263,7 +263,7 @@ function Enable-RDP {
 		
 		If($disableRDP){
 			Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Enable-RDP"
-			Write-Host "Enabling Remote Desktop Connection..." -ForegroundColor Green
+			Write-Host "Disabling Remote Desktop Connection..." -ForegroundColor Green
 			$installScript=((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/awurthmann/Set-RDP-Connection/main/Set-RDP-Connection.ps1'))
 			$ScriptBlock = [System.Management.Automation.ScriptBlock]::Create($installScript)
 			$ScriptArgs=@($False,$False)
@@ -730,6 +730,32 @@ function Load-StartLayout {
 	
 }
 
+function Rename-System {
+	Write-Host ""
+	$msg="Do you want to rename this computer, [Y]Yes, [N]No"
+	choice /c yn /m $msg
+	switch ($LASTEXITCODE){
+		1 {$rename=$True}
+		2 {$rename=$False}
+	}
+	
+	If($rename){
+		
+		$NewName=Read-Host("Enter New Computer Name")
+		
+		If ($NewName){
+			Rename-Computer -NewName $NewName 
+			Write-Progress -Activity "Renaming Computer" -Status "New Name: $NewName"
+			Write-Host "Renaming Computer to $NewName..." -ForegroundColor Green
+		}
+		Else{
+			$rename=$False
+		}
+	}
+	If (!$rename) {
+		Write-Progress -Activity "Skipping Renaming Computer" -Status "Name: $(hostname)"
+	}
+}
 
 ##Main##
 
@@ -765,6 +791,7 @@ If($localAdmin -and $internetAccess) {
 	Remove-Links
 	#Load-StartLayout #Not fully functional/Up to par
 	#Encrypt-System $ConfirmEncryptDesktop #Not fully functional/Up to par
+	Rename-System
 	
 	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Complete"
 	Write-Host "Complete" -ForegroundColor Cyan

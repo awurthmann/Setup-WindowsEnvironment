@@ -13,7 +13,7 @@ binary, for any purpose, commercial or non-commercial, and by any
 means.
 
 ## Instructions:
-	Copy/Paste the line below into PowerShell for default settings
+	Copy/Paste the line below into PowerShell (running with administrative privileges) for default settings
 ```powershell
 iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/awurthmann/Setup-WindowsEnvironment/main/Setup-WindowsEnvironment.ps1'))
 ```

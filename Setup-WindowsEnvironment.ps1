@@ -13,8 +13,8 @@
 #
 # --------------------------------------------------------------------------------------------
 # Name: Setup-WindowsEnvironment.ps1
-# Version: 2021.08.27.0723
-# Description: Setup Windows Enviroment on my Test System(s)
+# Version: 2021.08.27.1712
+# Description: Setup Windows Environment on my Test System(s)
 # 
 # Instructions: Run from PowerShell with Administrator permissions and Set-ExecutionPolicy Bypass -Scope Process -Force
 #	
@@ -26,7 +26,6 @@
 # --------------------------------------------------------------------------------------------
 
 Param (
-	[bool]$EnableRDP=$True,
 	[bool]$ConfirmWindowsFirewallControl=$True,
 	[bool]$ConfirmDisableCortana=$True,
 	[bool]$ConfirmDisableOneDrive=$True,
@@ -47,21 +46,21 @@ function isConnectedToInternet {
 }
 
 function Create-RestorePoint {
-	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Create-RestorePoint"
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Create-RestorePoint"
 	Write-Host "Creating Restore Point..." -ForegroundColor Green
     Enable-ComputerRestore -Drive $env:SystemDrive
     Checkpoint-Computer -Description "RP: $(Get-Date -Format yyyyMMdd-HHmmssfff:TK)" -RestorePointType "MODIFY_SETTINGS"
 }
 
 function Set-Profile {
-	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Set-Profile"
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Set-Profile"
 	Write-Host "Setting Profile..." -ForegroundColor Green
 	iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/awurthmann/my-powershell-profile/main/Set-Profile.ps1'))
 	Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
 }
 
 function Disable-Telemetry {
-	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Disable-Telemetry"
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Disable-Telemetry"
 	Write-Host "Disabling Telemetry..." -ForegroundColor Green
 	Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection" -Name "AllowTelemetry" -Type DWord -Value 0
 	Set-ItemProperty -Path "HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Policies\DataCollection" -Name "AllowTelemetry" -Type DWord -Value 0
@@ -77,7 +76,7 @@ function Disable-Telemetry {
 }
 
 function Disable-ApplicationSuggestions {
-	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Disable-ApplicationSuggestions"
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Disable-ApplicationSuggestions"
 	Write-Host "Disabling Application Suggestions..." -ForegroundColor Green
 	Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "ContentDeliveryAllowed" -Type DWord -Value 0
 	Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "OemPreInstalledAppsEnabled" -Type DWord -Value 0
@@ -95,7 +94,7 @@ function Disable-ApplicationSuggestions {
 }
 
 function Disable-ActivityHistory {
-	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Disable-ActivityHistory"
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Disable-ActivityHistory"
 	Write-Host "Disabling Activity History..." -ForegroundColor Green
 	Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableActivityFeed" -Type DWord -Value 0
 	Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System" -Name "PublishUserActivities" -Type DWord -Value 0
@@ -103,7 +102,7 @@ function Disable-ActivityHistory {
 }
 
 function Disable-LocationTracking {
-	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Disable-LocationTracking"
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Disable-LocationTracking"
 	Write-Host "Disabling Location Tracking..." -ForegroundColor Green
 	If (!(Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location")){
 		New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" -Force | Out-Null}
@@ -116,7 +115,7 @@ function Disable-LocationTracking {
 }
 
 function Disable-Feedback {
-	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Disable-Feedback"
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Disable-Feedback"
 	Write-Host "Disabling Feedback..." -ForegroundColor Green
 	If (!(Test-Path "HKCU:\SOFTWARE\Microsoft\Siuf\Rules")) {
 		New-Item -Path "HKCU:\SOFTWARE\Microsoft\Siuf\Rules" -Force | Out-Null}
@@ -127,7 +126,7 @@ function Disable-Feedback {
 }
 
 function Disable-AdTargeting {
-	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Disable-AdTargeting"
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Disable-AdTargeting"
 	Write-Host "Disabling Tailored Experiences..." -ForegroundColor Green
 	If (!(Test-Path "HKCU:\SOFTWARE\Policies\Microsoft\Windows\CloudContent")) {
 		New-Item -Path "HKCU:\SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Force | Out-Null}
@@ -140,7 +139,7 @@ function Disable-AdTargeting {
 }
 
 function Disable-WindowsP2PUpdates {
-	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Disable-WindowsP2PUpdates"
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Disable-WindowsP2PUpdates"
 	Write-Host "Disable Windows Update via P2P..." -ForegroundColor Green
 	If (!(Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization")) {
 		New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization" | Out-Null}
@@ -150,7 +149,7 @@ function Disable-WindowsP2PUpdates {
 }
 
 function Disable-RemoteAssistance {
-	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Disable-RemoteAssistance"
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Disable-RemoteAssistance"
 	Write-Host "Disabling Remote Assistance..." -ForegroundColor Green
 	Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Remote Assistance" -Name "fAllowToGetHelp" -Type DWord -Value 0
 }
@@ -158,7 +157,7 @@ function Disable-RemoteAssistance {
 function Disable-OneDrive {
 	Param ([bool]$Confirm=$True)
 	
-	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Disable-OneDrive?"
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Disable-OneDrive?"
 	
 	If ($Confirm) {
 		$disableOneDrive=$False
@@ -197,8 +196,8 @@ function Disable-OneDrive {
 }
 
 function Set-WindowsExplorerView {
-	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Set-WindowsExplorerView"
-	Write-Host "Show Hidden Items and File Extenctions" -ForegroundColor Green
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Set-WindowsExplorerView"
+	Write-Host "Show Hidden Items and File Extensions" -ForegroundColor Green
 	Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Hidden" -Type DWord -Value 1
 	Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "HideFileExt" -Type DWord -Value 0
 	
@@ -225,7 +224,7 @@ function Set-WindowsExplorerView {
 }
 
 function Disable-CapsLock {
-	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Disable-CapsLock"
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Disable-CapsLock"
 	Write-Host "Disabling Caps Lock..." -ForegroundColor Green
 	$hexified = "00,00,00,00,00,00,00,00,02,00,00,00,2a,00,3a,00,00,00,00,00".Split(',') | % { "0x$_"}
 	$kbLayout = 'HKLM:\System\CurrentControlSet\Control\Keyboard Layout'
@@ -245,7 +244,7 @@ function Enable-RDP {
 	}
 	
 	If($enableRDP){
-		Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Enable-RDP"
+		Write-Progress -Activity "Setting Up Windows Environment" -Status "Enable-RDP"
 		Write-Host "Enabling Remote Desktop Connection..." -ForegroundColor Green
 		$installScript=((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/awurthmann/Set-RDP-Connection/main/Set-RDP-Connection.ps1'))
 		$ScriptBlock = [System.Management.Automation.ScriptBlock]::Create($installScript)
@@ -262,7 +261,7 @@ function Enable-RDP {
 		}
 		
 		If($disableRDP){
-			Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Enable-RDP"
+			Write-Progress -Activity "Setting Up Windows Environment" -Status "Enable-RDP"
 			Write-Host "Disabling Remote Desktop Connection..." -ForegroundColor Green
 			$installScript=((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/awurthmann/Set-RDP-Connection/main/Set-RDP-Connection.ps1'))
 			$ScriptBlock = [System.Management.Automation.ScriptBlock]::Create($installScript)
@@ -273,14 +272,14 @@ function Enable-RDP {
 }
 
 function Install-Choco {
-	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Install-Choco"
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Install-Choco"
 	Set-ExecutionPolicy Bypass -Scope Process -Force
 	[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
 	iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 }
 
 function Install-BaseApps {
-	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Install-BaseApps"
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Install-BaseApps"
 	Write-Host "Installing Base Applications..." -ForegroundColor Green
 	$baseApps = @(
 		"7zip.install",
@@ -304,7 +303,7 @@ function Install-BaseApps {
 function Install-WindowsFirewallControl {
 	
 	Param ([bool]$Confirm=$True)
-	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Install-WindowsFirewallControl?"
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Install-WindowsFirewallControl?"
 	
 	If ($Confirm) {
 		$installWFC=$False
@@ -334,7 +333,7 @@ function Install-WindowsFirewallControl {
 function Install-OptionalApps {
 	Param ([bool]$Confirm=$True)
 	
-	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Install-OptionalApps?"
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Install-OptionalApps?"
 		
 	If($Confirm){Write-Host "Prompting for Optional Applications..." -ForegroundColor Green}
 	
@@ -386,7 +385,7 @@ function Install-OptionalApps {
 
 function Remove-UnwantedApps {
 	
-	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Remove-UnwantedApps"
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Remove-UnwantedApps"
 	
 	$UnwantedApps = @(
         "Microsoft.3DBuilder"
@@ -462,7 +461,7 @@ function Remove-UnwantedApps {
 
 function Disable-EdgeDefaults {
 	
-	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Disable-EdgeDefaults"
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Disable-EdgeDefaults"
 	
     Write-Host "Stopping Edge from taking over as the default application" -ForegroundColor Green
 	
@@ -492,7 +491,7 @@ function Disable-EdgeDefaults {
 function Disable-Cortana {
 	Param ([bool]$Confirm=$True)
 	
-	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Disable-Cortana?"
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Disable-Cortana?"
 	
 	If ($Confirm) {
 		$disableCortana=$False
@@ -531,7 +530,7 @@ function Disable-Cortana {
 function Disable-UnusedServices {
 	Param ([bool]$Confirm=$False)
 	
-	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Disable-UnusedServices?"
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Disable-UnusedServices?"
 	
 	If($Confirm){Write-Host "Prompting to disable Windows Services..." -ForegroundColor Green}
 	
@@ -602,7 +601,7 @@ function Disable-WindowsFileSharing {
 
 function Remove-Links {
 	
-	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Remove-Links"
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Remove-Links"
 	
 	Write-Host "Removing Links on Desktop..." -ForegroundColor Green
 	$userDesktop=[Environment]::GetFolderPath("Desktop")
@@ -613,7 +612,7 @@ function Remove-Links {
 
 function Set-SecuritySettings {
 	
-	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Set-SecuritySettings"
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Set-SecuritySettings"
 	
 	Write-Host "Raising UAC level..." -ForegroundColor Green
 	Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "ConsentPromptBehaviorAdmin" -Type DWord -Value 5
@@ -654,7 +653,7 @@ function Set-SecuritySettings {
 function Encrypt-System {
 	Param([bool]$Confirm=$False)
 	
-	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Encrypt-System"
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Encrypt-System"
 	
 	[bool]$Encrypt=$True
 	If($Confirm){
@@ -763,7 +762,7 @@ $localAdmin=isAdmin
 $internetAccess=isConnectedToInternet
 
 If($localAdmin -and $internetAccess) {
-	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Starting"
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Starting"
 	Create-RestorePoint
 	Set-Profile 
 	Disable-Telemetry
@@ -793,12 +792,12 @@ If($localAdmin -and $internetAccess) {
 	#Encrypt-System $ConfirmEncryptDesktop #Not fully functional/Up to par
 	Rename-System
 	
-	Write-Progress -Activity "Setting Up Windows Enviroment" -Status "Complete"
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Complete"
 	Write-Host "Complete" -ForegroundColor Cyan
 	
 	If ($ConfirmRestart) {
 		Write-Host ""
-		$msg="Restart computer, [Y]Yes, [N]No"
+		$msg="Restart computer now, [Y]Yes, [N]No"
 		choice /c yn /m $msg
 		switch ($LASTEXITCODE){
 			1 {Restart-Computer}

@@ -45,6 +45,26 @@ function isConnectedToInternet {
 	return (Test-NetConnection -ComputerName $RemoteHost -Port 443).TcpTestSucceeded
 }
 
+###Unused Service Related Functions
+# function isServiceRunning {
+	# Param ([string]$ServiceName)
+	# Return $(Get-Service $ServiceName -WarningAction SilentlyContinue -ErrorAction SilentlyContinue).Status -eq "Running"
+# }
+
+# function isServiceEnabled {
+	# Param ([string]$ServiceName)
+	
+	# $Service=Get-Service $ServiceName -ErrorAction SilentlyContinue
+	# If($Service){
+		# return $($ServiceName | Select -Property StartType -ErrorAction SilentlyContinue).StartType -ne "Disabled"
+	# }
+	# Else{
+		# return $False
+	# }
+	
+# }
+###End Unused Service Related Functions
+
 function Create-RestorePoint {
 	Write-Progress -Activity "Setting Up Windows Environment" -Status "Create-RestorePoint"
 	Write-Host "Creating Restore Point..." -ForegroundColor Green
@@ -546,9 +566,10 @@ function Disable-UnusedServices {
 		"RetailDemo"="Retail Demo Service";#Default is Manual
 		"WMPNetworkSvc"="Windows Media Player Network Sharing Service";#Default is Manual
 		"AJRouter"="AllJoyn Router Service";#Default is Manual
-		"lfsvc"="Geolocation Service";#Default is Manual <- But starts automaticly
-		"WbioSrvc"="Windows Biometric Service";#Default is Manual <- But starts automaticly
-		"EFS"="Encrypting File System (EFS - Not BitLocker)";#Default is Manual <- But starts automaticly
+		"lfsvc"="Geolocation Service";#Default is Manual <- But starts automatically
+		"WbioSrvc"="Windows Biometric Service";#Default is Manual <- But starts automatically
+		"lmhosts"="TCP/IP NetBIOS Helper";#Default is Manual <- But starts automatically
+		"EFS"="Encrypting File System (EFS - Not BitLocker)";#Default is Manual <- But starts automatically
 	}
 	$disableSvcs=@()
 	
@@ -584,7 +605,7 @@ function Disable-UnusedServices {
 	If($disableSvcs){
 		foreach ($Svc in $disableSvcs) {
 			Write-Host "Stopping and disabling $($targetedSvcs[$Svc]) service..." -ForegroundColor DarkGreen
-			Stop-Service $Svc -WarningAction SilentlyContinue
+			Stop-Service $Svc -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
 			Set-Service $Svc -StartupType Disabled -WarningAction SilentlyContinue
 		}
 	}
@@ -650,84 +671,86 @@ function Set-SecuritySettings {
 	
 }
 
-function Encrypt-System {
-	Param([bool]$Confirm=$False)
+###Unused Functions/Features - may re-add later
+# function Encrypt-System {
+	# Param([bool]$Confirm=$False)
 	
-	Write-Progress -Activity "Setting Up Windows Environment" -Status "Encrypt-System"
+	# Write-Progress -Activity "Setting Up Windows Environment" -Status "Encrypt-System"
 	
-	[bool]$Encrypt=$True
-	If($Confirm){
-		If((gwmi win32_computersystem -ea 0).pcsystemtype -ne 2){#If Desktop then prompt
-			Write-Host ""
-			$msg="Do you want to encrypt this desktop system, [Y]Yes, [N]No"
-			choice /c yn /m $msg
-			switch ($LASTEXITCODE){
-				1 {$Encrypt=$True;break}
-				2 {$Encrypt=$False;break}
-			}
-		}
-	}
+	# [bool]$Encrypt=$True
+	# If($Confirm){
+		# If((gwmi win32_computersystem -ea 0).pcsystemtype -ne 2){#If Desktop then prompt
+			# Write-Host ""
+			# $msg="Do you want to encrypt this desktop system, [Y]Yes, [N]No"
+			# choice /c yn /m $msg
+			# switch ($LASTEXITCODE){
+				# 1 {$Encrypt=$True;break}
+				# 2 {$Encrypt=$False;break}
+			# }
+		# }
+	# }
 	
-	If ($Encrypt){
-		$SystemDrive=[Environment]::GetEnvironmentVariable("SystemDrive")
-		Enable-BitLocker -MountPoint $SystemDrive -EncryptionMethod Aes256 -UsedSpaceOnly -TpmProtector
-		#Lock-BitLocker -MountPoint $SystemDrive
-	}
-}
+	# If ($Encrypt){
+		# $SystemDrive=[Environment]::GetEnvironmentVariable("SystemDrive")
+		# Enable-BitLocker -MountPoint $SystemDrive -EncryptionMethod Aes256 -UsedSpaceOnly -TpmProtector
+		##Lock-BitLocker -MountPoint $SystemDrive
+	# }
+# }
 
-function Load-StartLayout {
-	$StartLayout=@'
-	<LayoutModificationTemplate xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout" xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout" xmlns:taskbar="http://schemas.microsoft.com/Start/2014/TaskbarLayout" Version="1" xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification">
-		<LayoutOptions StartTileGroupCellWidth="6" />
-		<DefaultLayoutOverride>
-			<StartLayoutCollection>
-				<defaultlayout:StartLayout GroupCellWidth="6">
-					<start:Group Name="Browsers">
-						<start:DesktopApplicationTile Size="1x1" Column="0" Row="0" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Microsoft Edge.lnk" />
-						<start:DesktopApplicationTile Size="1x1" Column="1" Row="0" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Firefox.lnk" />
-						<start:DesktopApplicationTile Size="1x1" Column="2" Row="0" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Google Chrome.lnk" />
-					</start:Group>
-					<start:Group Name="Applications">
-						<start:DesktopApplicationTile Size="2x2" Column="0" Row="0" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Slack Technologies\Slack.lnk" />
-						<start:DesktopApplicationTile Size="2x2" Column="2" Row="0" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Zoom\Zoom.lnk" />
-						<start:DesktopApplicationTile Size="2x2" Column="4" Row="0" DesktopApplicationLinkPath="%USERPROFILE%\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Signal.lnk" />
-					</start:Group>
-				</defaultlayout:StartLayout>
-			</StartLayoutCollection>
-		</DefaultLayoutOverride>
-		<CustomTaskbarLayoutCollection PinListPlacement="Replace">
-			<defaultlayout:TaskbarLayout>
-				<taskbar:TaskbarPinList>
-					<taskbar:DesktopApp DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Slack Technologies\Slack.lnk" />
-					<taskbar:DesktopApp DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Google Chrome.lnk" />
-					<taskbar:DesktopApp DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Firefox.lnk" />
-					<taskbar:UWA AppUserModelID="Microsoft.MicrosoftEdge_8wekyb3d8bbwe!MicrosoftEdge" />
-					<taskbar:DesktopApp DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\System Tools\File Explorer.lnk" />
-					<taskbar:UWA AppUserModelID="Microsoft.WindowsTerminal_8wekyb3d8bbwe!App" />
-					<taskbar:DesktopApp DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\Accessories\Remote Desktop Connection.lnk" />
-				</taskbar:TaskbarPinList>
-			</defaultlayout:TaskbarLayout>
-		</CustomTaskbarLayoutCollection>
-	</LayoutModificationTemplate>
-'@
+# function Load-StartLayout {
+	# $StartLayout=@'
+	# <LayoutModificationTemplate xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout" xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout" xmlns:taskbar="http://schemas.microsoft.com/Start/2014/TaskbarLayout" Version="1" xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification">
+		# <LayoutOptions StartTileGroupCellWidth="6" />
+		# <DefaultLayoutOverride>
+			# <StartLayoutCollection>
+				# <defaultlayout:StartLayout GroupCellWidth="6">
+					# <start:Group Name="Browsers">
+						# <start:DesktopApplicationTile Size="1x1" Column="0" Row="0" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Microsoft Edge.lnk" />
+						# <start:DesktopApplicationTile Size="1x1" Column="1" Row="0" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Firefox.lnk" />
+						# <start:DesktopApplicationTile Size="1x1" Column="2" Row="0" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Google Chrome.lnk" />
+					# </start:Group>
+					# <start:Group Name="Applications">
+						# <start:DesktopApplicationTile Size="2x2" Column="0" Row="0" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Slack Technologies\Slack.lnk" />
+						# <start:DesktopApplicationTile Size="2x2" Column="2" Row="0" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Zoom\Zoom.lnk" />
+						# <start:DesktopApplicationTile Size="2x2" Column="4" Row="0" DesktopApplicationLinkPath="%USERPROFILE%\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Signal.lnk" />
+					# </start:Group>
+				# </defaultlayout:StartLayout>
+			# </StartLayoutCollection>
+		# </DefaultLayoutOverride>
+		# <CustomTaskbarLayoutCollection PinListPlacement="Replace">
+			# <defaultlayout:TaskbarLayout>
+				# <taskbar:TaskbarPinList>
+					# <taskbar:DesktopApp DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Slack Technologies\Slack.lnk" />
+					# <taskbar:DesktopApp DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Google Chrome.lnk" />
+					# <taskbar:DesktopApp DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Firefox.lnk" />
+					# <taskbar:UWA AppUserModelID="Microsoft.MicrosoftEdge_8wekyb3d8bbwe!MicrosoftEdge" />
+					# <taskbar:DesktopApp DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\System Tools\File Explorer.lnk" />
+					# <taskbar:UWA AppUserModelID="Microsoft.WindowsTerminal_8wekyb3d8bbwe!App" />
+					# <taskbar:DesktopApp DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\Accessories\Remote Desktop Connection.lnk" />
+				# </taskbar:TaskbarPinList>
+			# </defaultlayout:TaskbarLayout>
+		# </CustomTaskbarLayoutCollection>
+	# </LayoutModificationTemplate>
+# '@
 	
-	Import-StartLayout -LayoutPath $StartLayout -MountPath $Env:SYSTEMDRIVE\
+	# Import-StartLayout -LayoutPath $StartLayout -MountPath $Env:SYSTEMDRIVE\
 
-	New-Item -Path HKCU:\SOFTWARE\Policies\Microsoft\Windows -Name Explorer -ErrorAction SilentlyContinue
+	# New-Item -Path HKCU:\SOFTWARE\Policies\Microsoft\Windows -Name Explorer -ErrorAction SilentlyContinue
 
-	Reg Add "HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" /V LockedStartLayout /T REG_DWORD /D 1 /F
-	Reg Add "HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" /V StartLayoutFile /T REG_EXPAND_SZ /D $StartLayout /F
+	# Reg Add "HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" /V LockedStartLayout /T REG_DWORD /D 1 /F
+	# Reg Add "HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" /V StartLayoutFile /T REG_EXPAND_SZ /D $StartLayout /F
 
-	Stop-Process -ProcessName explorer
+	# Stop-Process -ProcessName explorer
 
-	Start-Sleep -s 10
+	# Start-Sleep -s 10
 
-	Remove-ItemProperty -Path "HKCU:\SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "LockedStartLayout" -Force
-	Remove-ItemProperty -Path "HKCU:\SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "StartLayoutFile" -Force
+	# Remove-ItemProperty -Path "HKCU:\SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "LockedStartLayout" -Force
+	# Remove-ItemProperty -Path "HKCU:\SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "StartLayoutFile" -Force
 
-	Stop-Process -ProcessName explorer
+	# Stop-Process -ProcessName explorer
 	
-}
+# }
+###End Unused Functions/Features - may re-add later
 
 function Rename-System {
 	Write-Host ""

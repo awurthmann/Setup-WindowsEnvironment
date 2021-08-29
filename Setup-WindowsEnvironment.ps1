@@ -656,9 +656,10 @@ function Set-SecuritySettings {
 	Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\QualityCompat" -Name "cadca5fe-87d3-4b96-b7fb-a231484277cc" -Type DWord -Value 0
 
 	Write-Host "Firewall: Block All Incoming Connections..." -ForegroundColor Green
-	Set-NetFirewallProfile -All -Enabled True
-	Set-NetFirewallProfile -All -DefaultInboundAction Block
-	Set-NetFirewallProfile -All -AllowInboundRules False
+	Set-NetFirewallProfile -All -Enabled True #May need to be reversed for WSL support via GUI 
+	Set-NetFirewallProfile -All -DefaultInboundAction Block #May need to be reversed for WSL support via GUI 
+	Set-NetFirewallProfile -All -AllowInboundRules False #May need to be reversed for WSL support via GUI 
+	New-NetFirewallRule -DisplayName "Block All Inbound on Wireless Adapters" -Direction Inbound -InterfaceType Wireless -Action Block #Redundant BUT works with WSL
 	
 	Write-Host "Enabling Reputation-based Protection..." -ForegroundColor Green
 	Set-MpPreference -PUAProtection Enabled

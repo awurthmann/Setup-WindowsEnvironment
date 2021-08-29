@@ -672,6 +672,17 @@ function Set-SecuritySettings {
 	
 }
 
+function Set-WindowsUpdateSettings {
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Set-WindowsUpdateSettings"
+	
+	Write-Host "Enabling Windows Updates for other Microsoft products..." -ForegroundColor Green
+	$ServiceManager = New-Object -ComObject "Microsoft.Update.ServiceManager"
+	$ServiceManager.ClientApplicationID = "My App"
+	$NewService = $ServiceManager.AddService2("7971f918-a847-4430-9279-4a52d1efe18d",7,"")
+	
+	#Add more settings here
+}
+
 ###Unused Functions/Features - may re-add later
 # function Encrypt-System {
 	# Param([bool]$Confirm=$False)
@@ -805,6 +816,7 @@ If($localAdmin -and $internetAccess) {
 	Remove-UnwantedApps
 	Disable-EdgeDefaults
 	Set-SecuritySettings
+	Set-WindowsUpdateSettings
 	Enable-RDP
 	Disable-UnusedServices $ConfirmUnusedServices
 	#Disable-WindowsFileSharing #Included in Disable-UnusedServices

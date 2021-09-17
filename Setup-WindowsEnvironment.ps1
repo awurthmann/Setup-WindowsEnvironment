@@ -673,14 +673,37 @@ function Set-SecuritySettings {
 }
 
 function Set-WindowsUpdateSettings {
-	Write-Progress -Activity "Setting Up Windows Environment" -Status "Set-WindowsUpdateSettings"
+	Write-Progress -Activity "Setting Microsoft Update Settings" -Status "Set-WindowsUpdateSettings"
 	
 	Write-Host "Enabling Windows Updates for other Microsoft products..." -ForegroundColor Green
 	$ServiceManager = New-Object -ComObject "Microsoft.Update.ServiceManager"
 	$ServiceManager.ClientApplicationID = "My App"
 	$NewService = $ServiceManager.AddService2("7971f918-a847-4430-9279-4a52d1efe18d",7,"")
 	
-	#Add more settings here
+	Write-Host "Setting updates to run every day at 3:00 AM..." -ForegroundColor Green
+	$AUSettings = (New-Object -com "Microsoft.Update.AutoUpdate").Settings
+	$AUSettings.NotificationLevel=4
+	$AUSettings.ScheduledInstallationDay=0
+	$AUSettings.ScheduledInstallationTime=3
+	$AUSettings.IncludeRecommendedUpdates=$True
+	$AUSettings.Save()
+}
+
+function Set-RepositorySettings{
+	Write-Progress -Activity "Setting PSGallery Repository to Trusted" -Status "Set-RepositorySettings"
+	
+	Write-Host "Setting PSGallery Repository to Trusted" -ForegroundColor Green
+	Install-PackageProvider -Name NuGet -Force
+	Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+}
+
+function Get-WindowsUpdates {
+	Write-Progress -Activity "Get Microsoft Updates" -Status "Get-WindowsUpdates"
+	
+	Write-Host "Getting Microsoft Updates" -ForegroundColor Green
+	Install-Module PSWindowsUpdate -Force
+	Add-WUServiceManager -MicrosoftUpdate -Confirm:$false
+	Install-WindowsUpdate -MicrosoftUpdate -AcceptAll -Install
 }
 
 ###Unused Functions/Features - may re-add later
@@ -707,60 +730,6 @@ function Set-WindowsUpdateSettings {
 		# Enable-BitLocker -MountPoint $SystemDrive -EncryptionMethod Aes256 -UsedSpaceOnly -TpmProtector
 		##Lock-BitLocker -MountPoint $SystemDrive
 	# }
-# }
-
-# function Load-StartLayout {
-	# $StartLayout=@'
-	# <LayoutModificationTemplate xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout" xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout" xmlns:taskbar="http://schemas.microsoft.com/Start/2014/TaskbarLayout" Version="1" xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification">
-		# <LayoutOptions StartTileGroupCellWidth="6" />
-		# <DefaultLayoutOverride>
-			# <StartLayoutCollection>
-				# <defaultlayout:StartLayout GroupCellWidth="6">
-					# <start:Group Name="Browsers">
-						# <start:DesktopApplicationTile Size="1x1" Column="0" Row="0" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Microsoft Edge.lnk" />
-						# <start:DesktopApplicationTile Size="1x1" Column="1" Row="0" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Firefox.lnk" />
-						# <start:DesktopApplicationTile Size="1x1" Column="2" Row="0" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Google Chrome.lnk" />
-					# </start:Group>
-					# <start:Group Name="Applications">
-						# <start:DesktopApplicationTile Size="2x2" Column="0" Row="0" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Slack Technologies\Slack.lnk" />
-						# <start:DesktopApplicationTile Size="2x2" Column="2" Row="0" DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Zoom\Zoom.lnk" />
-						# <start:DesktopApplicationTile Size="2x2" Column="4" Row="0" DesktopApplicationLinkPath="%USERPROFILE%\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Signal.lnk" />
-					# </start:Group>
-				# </defaultlayout:StartLayout>
-			# </StartLayoutCollection>
-		# </DefaultLayoutOverride>
-		# <CustomTaskbarLayoutCollection PinListPlacement="Replace">
-			# <defaultlayout:TaskbarLayout>
-				# <taskbar:TaskbarPinList>
-					# <taskbar:DesktopApp DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Slack Technologies\Slack.lnk" />
-					# <taskbar:DesktopApp DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Google Chrome.lnk" />
-					# <taskbar:DesktopApp DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Firefox.lnk" />
-					# <taskbar:UWA AppUserModelID="Microsoft.MicrosoftEdge_8wekyb3d8bbwe!MicrosoftEdge" />
-					# <taskbar:DesktopApp DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\System Tools\File Explorer.lnk" />
-					# <taskbar:UWA AppUserModelID="Microsoft.WindowsTerminal_8wekyb3d8bbwe!App" />
-					# <taskbar:DesktopApp DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\Accessories\Remote Desktop Connection.lnk" />
-				# </taskbar:TaskbarPinList>
-			# </defaultlayout:TaskbarLayout>
-		# </CustomTaskbarLayoutCollection>
-	# </LayoutModificationTemplate>
-# '@
-	
-	# Import-StartLayout -LayoutPath $StartLayout -MountPath $Env:SYSTEMDRIVE\
-
-	# New-Item -Path HKCU:\SOFTWARE\Policies\Microsoft\Windows -Name Explorer -ErrorAction SilentlyContinue
-
-	# Reg Add "HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" /V LockedStartLayout /T REG_DWORD /D 1 /F
-	# Reg Add "HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" /V StartLayoutFile /T REG_EXPAND_SZ /D $StartLayout /F
-
-	# Stop-Process -ProcessName explorer
-
-	# Start-Sleep -s 10
-
-	# Remove-ItemProperty -Path "HKCU:\SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "LockedStartLayout" -Force
-	# Remove-ItemProperty -Path "HKCU:\SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "StartLayoutFile" -Force
-
-	# Stop-Process -ProcessName explorer
-	
 # }
 ###End Unused Functions/Features - may re-add later
 
@@ -819,13 +788,13 @@ If($localAdmin -and $internetAccess) {
 	Set-WindowsUpdateSettings
 	Enable-RDP
 	Disable-UnusedServices $ConfirmUnusedServices
-	#Disable-WindowsFileSharing #Included in Disable-UnusedServices
 	Disable-OneDrive $ConfirmDisableOneDrive
 	Disable-Cortana $ConfirmDisableCortana
 	Set-WindowsExplorerView 
 	Remove-Links
-	#Load-StartLayout #Not fully functional/Up to par
 	#Encrypt-System $ConfirmEncryptDesktop #Not fully functional/Up to par
+	Set-RepositorySettings
+	Get-WindowsUpdates
 	Rename-System
 	
 	Write-Progress -Activity "Setting Up Windows Environment" -Status "Complete"

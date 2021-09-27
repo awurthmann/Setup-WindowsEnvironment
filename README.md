@@ -17,6 +17,13 @@ means.
 ```powershell
 iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/awurthmann/Setup-WindowsEnvironment/main/Setup-WindowsEnvironment.ps1'))
 ```
+OR to change the default arguments, Example below uses my preferred settings and renames the system to "gibson"
+```powershell
+$installScript=((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/awurthmann/Setup-WindowsEnvironment/main/Setup-WindowsEnvironment.ps1'))
+$ScriptBlock = [System.Management.Automation.ScriptBlock]::Create($installScript)
+$ScriptArgs=@($True,"gibson")
+Invoke-Command $ScriptBlock -ArgumentList $ScriptArgs
+```
 ## Alternative Instructions:
 	  - Download Setup-WindowsEnvironment.ps1
 	  - Open PowerShell

@@ -158,11 +158,13 @@ function Write-Log {
 
 
 function Create-RestorePoint {
+	Write-Log $LogFile "$($MyInvocation.MyCommand)"
 	Write-Progress -Activity "Setting Up Windows Environment" -Status "Create-RestorePoint"
 	Write-Host ""
 	Write-Host "Creating Restore Point..." -ForegroundColor Green
-	Write-Log $LogFile "$($MyInvocation.MyCommand)"
+	Write-Log $LogFile " Enabling Restore Feature for Drive: $($env:SystemDrive)"
 	Enable-ComputerRestore -Drive $env:SystemDrive -ErrorAction Stop
+	Write-Log $LogFile " Creating Restore Point Named: 'RP: $(Get-Date -Format yyyyMMdd-HHmmssfff:TK)'"
 	Checkpoint-Computer -Description "RP: $(Get-Date -Format yyyyMMdd-HHmmssfff:TK)" -RestorePointType "MODIFY_SETTINGS" -ErrorAction Stop -WarningAction SilentlyContinue -WarningVariable CapturedWarning
 	If ($CapturedWarning){
 		Write-Log $LogFile "$CapturedWarning"
@@ -175,12 +177,10 @@ function Create-RestorePoint {
 
 function Set-Profile {
 	Param ([bool]$Confirm)
-
-	Write-Progress -Activity "Setting Up Windows Environment" -Status "Set-Profile"
-	Write-Host ""
-	Write-Host "Import Profile..." -ForegroundColor Green
-	Write-Log $LogFile "$($MyInvocation.MyCommand)"
 	
+	Write-Log $LogFile "$($MyInvocation.MyCommand)"
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "Set-Profile"
+
 	If ($Confirm) {
 		$Proceed=$False
 		Write-Host -NoNewLine "I prefer a custom PowerShell profile, a custom prompt and functions.`n As seen here: " -ForegroundColor Yellow
@@ -202,15 +202,25 @@ function Set-Profile {
 		return
 	}
 	
+	Write-Host ""
+	Write-Host "Import Profile..." -ForegroundColor Green
+	Write-Log $LogFile " Importing Profile: 'https://raw.githubusercontent.com/awurthmann/my-powershell-profile/main/Set-Profile.ps1'"
+	
 	try{
 		iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/awurthmann/my-powershell-profile/main/Set-Profile.ps1'))
-		Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
 	}
 	catch{
 		$Result="Error"
 		Write-Log $LogFile $_.Exception.Message
 	}
 	
+	If ($Result -ne "Error"){
+		Write-Host ""
+		Write-Host "Setting Execution Policy to 'RemoteSigned'" -ForegroundColor Green
+		Write-Log $LogFile " Setting Execution Policy to 'RemoteSigned'"
+		Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
+	}
+
 	If(!($Result)){$Result="No Errors"}
 	Write-Log $LogFile "$($MyInvocation.MyCommand) Completed with Result: $Result"
 	
@@ -219,11 +229,11 @@ function Set-Profile {
 function Disable-Telemetry {
 	Param ([bool]$Confirm)
 	
+	Write-Log $LogFile "$($MyInvocation.MyCommand)"
 	Write-Progress -Activity "Setting Up Windows Environment" -Status "Disable-Telemetry"
 	Write-Host ""
 	Write-Host "Disable Telemetry..." -ForegroundColor Green
-	Write-Log $LogFile "$($MyInvocation.MyCommand)"
-	
+
 	If ($Confirm) {
 		$Proceed=$False
 		Write-Host "Windows Telemetry sends diagnostic data to Microsoft. This data includes basic " -ForegroundColor Yellow
@@ -243,17 +253,24 @@ function Disable-Telemetry {
 		return
 	}
 	
-	Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection" -Name "AllowTelemetry" -Type DWord -Value 0
-	Set-ItemProperty -Path "HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Policies\DataCollection" -Name "AllowTelemetry" -Type DWord -Value 0
-	Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection" -Name "AllowTelemetry" -Type DWord -Value 0
+	Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection" -Name "AllowTelemetry" -Type DWord -Value 0  | Out-Null
+	Set-ItemProperty -Path "HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Policies\DataCollection" -Name "AllowTelemetry" -Type DWord -Value 0  | Out-Null
+	Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection" -Name "AllowTelemetry" -Type DWord -Value 0  | Out-Null
+	
 	Disable-ScheduledTask -TaskName "Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser" | Out-Null
 	Disable-ScheduledTask -TaskName "Microsoft\Windows\Application Experience\ProgramDataUpdater" | Out-Null
 	Disable-ScheduledTask -TaskName "Microsoft\Windows\Autochk\Proxy" | Out-Null
 	Disable-ScheduledTask -TaskName "Microsoft\Windows\Customer Experience Improvement Program\Consolidator" | Out-Null
 	Disable-ScheduledTask -TaskName "Microsoft\Windows\Customer Experience Improvement Program\UsbCeip" | Out-Null
 	Disable-ScheduledTask -TaskName "Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector" | Out-Null
+	
 	Stop-Service "DiagTrack" -WarningAction SilentlyContinue
 	Set-Service "DiagTrack" -StartupType Disabled -WarningAction SilentlyContinue
+	
+	$SelectPattern="Set-ItemProperty","Disable-ScheduledTask","Stop-Service","Set-Service"
+	$Commands=$($($MyInvocation.MyCommand.Definition -split "`n") | Select-String -Pattern $SelectPattern | Where-Object { $_ -NotMatch "SelectPattern"})
+	ForEach ($Command in $Commands) {Write-Log $LogFile " $Command"}
+	
 	Write-Log $LogFile "$($MyInvocation.MyCommand) Completed"
 }
 
@@ -841,6 +858,7 @@ function Install-OptionalApps {
 		"visualstudio2019-workload-python"="Python support in Visual Studio";
 		"steam-client"="Steam";
 		"goggalaxy"="GOG Galaxy";
+		"bitvise-ssh-server"="Bitvise SSH Server";
 		"discord"="Discord"
 	}
 	$installApps=@()
@@ -1249,10 +1267,17 @@ function Set-SecuritySettings {
 	Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\QualityCompat" -Name "cadca5fe-87d3-4b96-b7fb-a231484277cc" -Type DWord -Value 0
 
 	Write-Host "Firewall: Block All Incoming Connections..." -ForegroundColor Green
-	Set-NetFirewallProfile -All -Enabled True #May need to be reversed for WSL support via GUI 
-	Set-NetFirewallProfile -All -DefaultInboundAction Block #May need to be reversed for WSL support via GUI 
-	Set-NetFirewallProfile -All -AllowInboundRules False #May need to be reversed for WSL support via GUI 
-	New-NetFirewallRule -DisplayName "Block All Inbound on Wireless Adapters" -Direction Inbound -InterfaceType Wireless -Action Block #Redundant BUT works with WSL
+	Set-NetFirewallProfile -All -Enabled True
+	Set-NetFirewallProfile -All -DefaultInboundAction Block
+	Set-NetFirewallProfile -All -AllowInboundRules False #May need to be reversed for WSL support via GUI. Settings > Windows Security > Domain/Private/Public > Uncheck Block all incoming connections, including those in the list of allowed apps
+	New-NetFirewallRule -DisplayName "Block All Inbound on Wireless Adapters" -Direction Inbound -InterfaceType Wireless -Action Block  | Out-Null #Redundant BUT works with WSL
+	
+	Write-Log $LogFile " Set-NetFirewallProfile -All -Enabled True"
+	Write-Log $LogFile " Set-NetFirewallProfile -All -DefaultInboundAction Block"
+	Write-Log $LogFile " Set-NetFirewallProfile -All -AllowInboundRules False"
+	Write-Log $LogFile " 	WARNING: Setting may need to be reversed for Windows Subsystem for Linux (WSL) support. Settings > Windows Security > Domain/Private/Public > Uncheck Block all incoming connections, including those in the list of allowed apps"
+	Write-Log $LogFile " New-NetFirewallRule -DisplayName "Block All Inbound on Wireless Adapters" -Direction Inbound -InterfaceType Wireless -Action Block "
+	Write-Log $LogFile " 	NOTE: This rule is redundant but is compatible with WSL"
 	
 	Write-Host "Enabling Reputation-based Protection..." -ForegroundColor Green
 	Set-MpPreference -PUAProtection Enabled
@@ -1326,7 +1351,7 @@ function Set-RepositorySettings{
 	
 	
 	Write-Host "Setting PSGallery Repository to Trusted" -ForegroundColor Green
-	Install-PackageProvider -Name NuGet -Force
+	Install-PackageProvider -Name NuGet -Force | Out-Null
 	Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
 	Write-Log $LogFile "$($MyInvocation.MyCommand) Completed"
 }
@@ -1460,11 +1485,12 @@ $internetAccess=isConnectedToInternet
 If($localAdmin -and $internetAccess) {
 	Write-Progress -Activity "Setting Up Windows Environment" -Status "Starting"
 		
-	$ScriptPath=Split-Path $($MyInvocation.MyCommand.Path) -Parent
+	$ScriptPath=Split-Path $($MyInvocation.MyCommand.Path) -Parent -ErrorAction SilentlyContinue
 	$ScriptName=$MyInvocation.MyCommand.Name
+	If (!($ScriptName)){$ScriptName="Setup-WindowsEnvironment.ps1"}
 	
 	If (!($LogFile)){
-		If (!($ScriptName)){$ScriptName="Setup-WindowsEnvironment.ps1"}
+		#If (!($ScriptName)){$ScriptName="Setup-WindowsEnvironment.ps1"}
 		#$LogFile="$env:SystemDrive\$($(Get-Date).ToString("yyyyMMddHHmm"))_$($ScriptName)" -replace "ps1","txt"
 		$LogFile="$env:SystemDrive\$($ScriptName)" -replace "ps1","txt"
 	}

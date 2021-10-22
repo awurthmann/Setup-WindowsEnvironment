@@ -13,7 +13,7 @@
 #
 # --------------------------------------------------------------------------------------------
 # Name: Setup-WindowsEnvironment.ps1
-# Version: 2021.10.22.1529
+# Version: 2021.10.22.1553
 # Description: Setup Windows Environment on my Test System(s)
 # 
 # Instructions: Run from PowerShell with Administrator permissions and Set-ExecutionPolicy Bypass -Scope Process -Force
@@ -589,7 +589,7 @@ function Disable-AdTargeting {
 	# New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo" -ErrorAction SilentlyContinue | Out-Null
 	# Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo" -Name "DisabledByGroupPolicy" -Type DWord -Value 1	
 	
-	$cmds=@ (
+	$cmds=@(
 		"Write-Host 'Disabling Tailored Experiences...' -ForegroundColor Green",
 		"Write-Host 'Setting DisableTailoredExperiencesWithDiagnosticData...' -ForegroundColor DarkGreen",
 		"New-Item -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\CloudContent' -Force -ErrorAction SilentlyContinue | Out-Null",
@@ -1823,7 +1823,7 @@ If($localAdmin -and $internetAccess) {
 	Write-Log $LogFile "End: $ScriptName"
 	
 	If ($ConfirmRestart) {
-		[string]$MyCommand="ConfirmRestart")
+		[string]$MyCommand="ConfirmRestart"
 		Write-Progress -Activity "Setting Up Windows Environment" -Status "$MyCommand"
 		Write-Host ""
 		Write-Host "$MyCommand" -ForegroundColor Green

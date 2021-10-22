@@ -13,7 +13,7 @@
 #
 # --------------------------------------------------------------------------------------------
 # Name: Setup-WindowsEnvironment.ps1
-# Version: 2021.10.22.1553
+# Version: 2021.10.22.1634
 # Description: Setup Windows Environment on my Test System(s)
 # 
 # Instructions: Run from PowerShell with Administrator permissions and Set-ExecutionPolicy Bypass -Scope Process -Force
@@ -807,13 +807,15 @@ function Set-WindowsExplorerView {
 function Disable-CapsLock {
 	Param ([bool]$Confirm)
 	
-	Write-Progress -Activity "Setting Up Windows Environment" -Status "Disable-CapsLock"
+	[string]$MyCommand=$($MyInvocation.MyCommand)
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "$MyCommand"
 	Write-Host ""
-	Write-Host "Disabling Caps Lock..." -ForegroundColor Green
-	Write-Log $LogFile "$($MyInvocation.MyCommand)"
+	Write-Host "$MyCommand" -ForegroundColor Green
+	Write-Log $LogFile "$MyCommand"
 	
 	If ($Confirm) {
 		$Proceed=$False
+		Write-Host "I prefer the Caps Lock be disabled and remapped to an additional Shift key" -ForegroundColor Yellow
 		Write-Host ""
 		$msg="Do you want to disable the Caps Lock key, [Y]Yes, [N]No"
 		choice /c yn /m $msg
@@ -824,7 +826,8 @@ function Disable-CapsLock {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Log $LogFile "$($MyInvocation.MyCommand) Skipped"
+		Write-Host "$MyCommand Skipped" 
+		Write-Log $LogFile "$MyCommand Skipped"
 		return
 	}
 	
@@ -834,16 +837,23 @@ function Disable-CapsLock {
 	if (!(Get-ItemProperty -Path $kbLayout -Name $keyName -ErrorAction SilentlyContinue)){
 		New-ItemProperty -Path $kbLayout -Name $keyName -PropertyType Binary -Value ([byte[]]$hexified)
 	}
-	Write-Log $LogFile "$($MyInvocation.MyCommand) Completed"
+	
+	Write-Host "$MyCommand Completed" -ForegroundColor DarkGreen
+	Write-Log $LogFile "$MyCommand Completed"
 }
 
 function Enable-RDP {
 	Param ([bool]$Confirm)
 	
 	##Needs to be reworked
-	Write-Log $LogFile "$($MyInvocation.MyCommand)"
-	
+	[string]$MyCommand=$($MyInvocation.MyCommand)
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "$MyCommand"
 	Write-Host ""
+	Write-Host "$MyCommand" -ForegroundColor Green
+	Write-Log $LogFile "$MyCommand"
+		
+	Write-Host "Remote Desktop Connection is a way to access a this computer's" -ForegroundColor Yellow
+	Write-Host " desktop from another computer in order to run applications" -ForegroundColor Yellow
 	$msg="Do you want to Enable Remote Desktop, [Y]Yes, [N]No"
 	choice /c yn /m $msg
 	switch ($LASTEXITCODE){
@@ -883,12 +893,14 @@ function Enable-RDP {
 function Install-Choco {
 	Param ([bool]$Confirm)
 	
-	Write-Progress -Activity "Setting Up Windows Environment" -Status "Install-Choco"
-	Write-Log $LogFile "$($MyInvocation.MyCommand)"
+	[string]$MyCommand=$($MyInvocation.MyCommand)
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "$MyCommand"
+	Write-Host ""
+	Write-Host "$MyCommand" -ForegroundColor Green
+	Write-Log $LogFile "$MyCommand"
 	
 	If ($Confirm) {
 		$Proceed=$False
-		Write-Host ""
 		Write-Host "Chocolatey has the largest online registry of Windows packages." -ForegroundColor Yellow
 		Write-Host "Packages encapsulate everything required to manage a" -ForegroundColor Yellow
 		Write-Host "particular piece of software into one deployment artifact by" -ForegroundColor Yellow
@@ -955,15 +967,17 @@ function Install-BaseApps {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Log $LogFile "$($MyInvocation.MyCommand) Skipped"
+		Write-Host "$MyCommand Skipped" 
+		Write-Log $LogFile "$MyCommand Skipped"
 		return
 	}
 	Write-Log $LogFile "Attempting to install: $($baseApps.Values -join ", ")"
 
 	choco install $baseApps.keys -y
 
+	Write-Host "$MyCommand Completed" -ForegroundColor DarkGreen
 	Write-Log $LogFile "See $($env:ProgramData)\Chocolatey\logs\chocolatey.log for details"
-	Write-Log $LogFile "$($MyInvocation.MyCommand) Completed"
+	Write-Log $LogFile "$MyCommand Completed"
 }
 
 function Install-Sysinternals {
@@ -1265,13 +1279,16 @@ function Remove-UnwantedApps {
 function Disable-EdgeDefaults {
 	Param ([bool]$Confirm)
 	
-	Write-Progress -Activity "Setting Up Windows Environment" -Status "Disable-EdgeDefaults"
+	[string]$MyCommand=$($MyInvocation.MyCommand)
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "$MyCommand"
 	Write-Host ""
-    Write-Host "Stopping Edge from taking over as the default application" -ForegroundColor Green
-	Write-Log $LogFile "$($MyInvocation.MyCommand)"
+	Write-Host "$MyCommand" -ForegroundColor Green
+	Write-Log $LogFile "$MyCommand"
 	
 	If ($Confirm) {
 		$Proceed=$False
+		Write-Host "I prefer to use Chrome or Firefox as my default browser and remove the ability " -ForegroundColor Yellow
+		Write-Host " for Microsoft edge to make itself the default for URLs and HTML files" -ForegroundColor Yellow
 		Write-Host ""
 		$msg="Do you want to disable Edge from being the default application for URLs and HTML files [Y]Yes, [N]No"
 		choice /c yn /m $msg
@@ -1282,7 +1299,8 @@ function Disable-EdgeDefaults {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Log $LogFile "$($MyInvocation.MyCommand) Skipped"
+		Write-Host "$MyCommand Skipped" 
+		Write-Log $LogFile "$MyCommand Skipped"
 		return
 	}
 	
@@ -1485,8 +1503,11 @@ function Remove-Links {
 function Set-SecuritySettings {
 	Param ([bool]$Confirm)
 	
-	Write-Progress -Activity "Setting Up Windows Environment" -Status "Set-SecuritySettings"
-	Write-Log $LogFile "$($MyInvocation.MyCommand)"
+	[string]$MyCommand=$($MyInvocation.MyCommand)
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "$MyCommand"
+	Write-Host ""
+	Write-Host "$MyCommand" -ForegroundColor Green
+	Write-Log $LogFile "$MyCommand"
 	
 	If ($Confirm) {
 		$Proceed=$False
@@ -1504,9 +1525,9 @@ function Set-SecuritySettings {
 			2 {$Proceed=$False}
 		}
 	}
-	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Log $LogFile "$($MyInvocation.MyCommand) Skipped"
+		Write-Host "$MyCommand Skipped" 
+		Write-Log $LogFile "$MyCommand Skipped"
 		return
 	}
 	
@@ -1551,14 +1572,19 @@ function Set-SecuritySettings {
 	Get-ChildItem $i | ForEach-Object {  
 		Set-ItemProperty -Path "$i\$($_.pschildname)" -name NetBiosOptions -value 2}
 	(Get-WmiObject Win32_NetworkAdapterConfiguration -Filter IpEnabled="true").SetTcpipNetbios(2) | Out-Null
-	Write-Log $LogFile "$($MyInvocation.MyCommand) Completed"
+	
+	Write-Host "$MyCommand Completed" -ForegroundColor DarkGreen
+	Write-Log $LogFile "$MyCommand Completed"
 }
 
 function Set-WindowsUpdateSettings {
 	Param ([bool]$Confirm)
 	
-	Write-Progress -Activity "Setting Microsoft Update Settings" -Status "Set-WindowsUpdateSettings"
-	Write-Log $LogFile "$($MyInvocation.MyCommand)"
+	[string]$MyCommand=$($MyInvocation.MyCommand)
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "$MyCommand"
+	Write-Host ""
+	Write-Host "$MyCommand" -ForegroundColor Green
+	Write-Log $LogFile "$MyCommand"
 	
 	If ($Confirm) {
 		$Proceed=$False
@@ -1588,7 +1614,9 @@ function Set-WindowsUpdateSettings {
 	$AUSettings.ScheduledInstallationTime=3
 	$AUSettings.IncludeRecommendedUpdates=$True
 	$AUSettings.Save()
-	Write-Log $LogFile "$($MyInvocation.MyCommand) Completed"
+	
+	Write-Host "$MyCommand Completed" -ForegroundColor DarkGreen
+	Write-Log $LogFile "$MyCommand Completed"
 }
 
 function Set-RepositorySettings{
@@ -1802,7 +1830,7 @@ If($localAdmin -and $internetAccess) {
 			#
 		}
 	##End Chocolatey Installations
-	Install-Sysinernals $ConfirmInstallSysinternals
+	Install-Sysinternals $ConfirmInstallSysinternals
 	Remove-UnwantedApps $ConfirmRemoveUnwantedApps
 	Disable-EdgeDefaults $ConfirmDisableEdgeDefaults
 	Set-SecuritySettings $ConfirmSetSecuritySettings

@@ -186,11 +186,11 @@ function Create-RestorePoint {
 function Set-Profile {
 	Param ([bool]$Confirm)
 	
-	$MyCommand=$($MyInvocation.MyCommand)
-	Write-Log $LogFile "$($MyCommand)"
-	Write-Progress -Activity "Setting Up Windows Environment" -Status "$($MyCommand)"
+	[string]$MyCommand=$($MyInvocation.MyCommand)
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "$MyCommand"
 	Write-Host ""
-	Write-Host "Setting Profile..." -ForegroundColor Green
+	Write-Host "$MyCommand" -ForegroundColor Green
+	Write-Log $LogFile "$MyCommand"
 
 	If ($Confirm) {
 		$Proceed=$False
@@ -209,12 +209,12 @@ function Set-Profile {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Log $LogFile "$($MyCommand) Skipped"
+		Write-Log $LogFile "$MyCommand Skipped"
 		return
 	}
 	
 	Write-Host ""
-	Write-Host "Import Profile..." -ForegroundColor Green
+	Write-Host "Import Profile..." -ForegroundColor DarkGreen
 	Write-Log $LogFile " Importing Profile: 'https://raw.githubusercontent.com/awurthmann/my-powershell-profile/main/Set-Profile.ps1'"
 	
 	try{
@@ -226,15 +226,15 @@ function Set-Profile {
 	}
 	
 	If ($Result -ne "Error"){
-		Write-Host ""
-		Write-Host "Setting Execution Policy to 'RemoteSigned'" -ForegroundColor Green
+		Write-Host "Setting Execution Policy to 'RemoteSigned'" -ForegroundColor DarkGreen
 		Write-Log $LogFile " Setting Execution Policy to 'RemoteSigned'"
 		Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
 	}
 
 	If(!($Result)){$Result="No Errors"}
-	Write-Log $LogFile "$($MyCommand) Completed with Result: $Result"
 	
+	Write-Host "$MyCommand Completed with Result: $Result" -ForegroundColor DarkGreen
+	Write-Log $LogFile "$MyCommand Completed with Result: $Result"	
 }
 
 function Disable-Telemetry {
@@ -1394,8 +1394,11 @@ function Disable-Cortana {
 function Disable-UnusedServices {
 	Param ([bool]$Confirm=$False)
 	
-	Write-Progress -Activity "Setting Up Windows Environment" -Status "Disable-UnusedServices?"
-	Write-Log $LogFile "$($MyInvocation.MyCommand)"
+	[string]$MyCommand=$($MyInvocation.MyCommand)
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "$MyCommand"
+	Write-Host ""
+	Write-Host "$MyCommand" -ForegroundColor Green
+	Write-Log $LogFile "$MyCommand"
 	
 	If($Confirm){Write-Host "Prompting to disable Windows Services..." -ForegroundColor Green}
 	
@@ -1470,12 +1473,17 @@ function Disable-UnusedServices {
 function Disable-WindowsFileSharing {
 	#Called from Disable-UnusedServices if "Workstation" and "Server" services are set to disable
 	
-	Write-Host "Disabling Windows File Sharing..." -ForegroundColor DarkGreen
-	Write-Log $LogFile "$($MyInvocation.MyCommand)"
+	[string]$MyCommand=$($MyInvocation.MyCommand)
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "$MyCommand"
+	Write-Host ""
+	Write-Host "$MyCommand" -ForegroundColor Green
+	Write-Log $LogFile "$MyCommand"
 	
 	Get-NetAdapterBinding -DisplayName "Client for Microsoft Networks" | % {Disable-NetAdapterBinding -Name $_.Name -ComponentID $_.ComponentID}
 	Get-NetAdapterBinding -DisplayName "File and Printer Sharing for Microsoft Networks" | % {Disable-NetAdapterBinding -Name $_.Name -ComponentID $_.ComponentID}
-	Write-Log $LogFile "$($MyInvocation.MyCommand) Completed"
+	
+	Write-Host "$MyCommand Completed" -ForegroundColor DarkGreen
+	Write-Log $LogFile "$MyCommand Completed"
 }
 
 function Remove-Links {
@@ -1667,8 +1675,11 @@ function Set-RepositorySettings{
 function Get-WindowsUpdates {
 	Param ([bool]$Confirm)
 	
-	Write-Progress -Activity "Get Microsoft Updates" -Status "Get-WindowsUpdates"
-	Write-Log $LogFile "$($MyInvocation.MyCommand)"
+	[string]$MyCommand=$($MyInvocation.MyCommand)
+	Write-Progress -Activity "Setting Up Windows Environment" -Status "$MyCommand"
+	Write-Host ""
+	Write-Host "$MyCommand" -ForegroundColor Green
+	Write-Log $LogFile "$MyCommand"
 	
 	If ($Confirm) {
 		$Proceed=$False
@@ -1682,15 +1693,19 @@ function Get-WindowsUpdates {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Log $LogFile "$($MyInvocation.MyCommand) Skipped"
+		Write-Host "$MyCommand Skipped" 
+		Write-Log $LogFile "$MyCommand Skipped"
 		return
 	}
 		
 	Write-Host "Getting Microsoft Updates" -ForegroundColor Green
+	
 	Install-Module PSWindowsUpdate -Force
 	Add-WUServiceManager -MicrosoftUpdate -Confirm:$false
-	Install-WindowsUpdate -MicrosoftUpdate -AcceptAll -Install
-	Write-Log $LogFile "$($MyInvocation.MyCommand) Completed"
+	Install-WindowsUpdate -MicrosoftUpdate -AcceptAll -Install -Hide -IgnoreReboot
+	
+	Write-Host "$MyCommand Completed" -ForegroundColor DarkGreen
+	Write-Log $LogFile "$MyCommand Completed"
 }
 
 ###Unused Functions/Features - may re-add later

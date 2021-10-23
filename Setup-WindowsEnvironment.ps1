@@ -13,7 +13,7 @@
 #
 # --------------------------------------------------------------------------------------------
 # Name: Setup-WindowsEnvironment.ps1
-# Version: 2021.10.22.1634
+# Version: 2021.10.22.1757
 # Description: Setup Windows Environment on my Test System(s)
 # 
 # Instructions: Run from PowerShell with Administrator permissions and Set-ExecutionPolicy Bypass -Scope Process -Force
@@ -142,6 +142,10 @@ function isServiceEnabled {
 		return $False
 	}
 	
+}
+
+function isWindows11 {
+	return ([System.Environment]::OSVersion.Version.Major -eq 10) -and ([System.Environment]::OSVersion.Version.Build -ge 22000)
 }
 
 function Write-Log {
@@ -1273,6 +1277,12 @@ function Remove-UnwantedApps {
         Write-Host "If present, removing $App." -ForegroundColor DarkGreen
 		Write-Log $LogFile "If present, removing $App."
     }
+	
+	If (isWindows11) {
+		New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Force -ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Out-Null
+		Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarMn" -Type DWord -Value 0
+	}
+	
 	Write-Log $LogFile "$($MyInvocation.MyCommand) Completed"
 }
 

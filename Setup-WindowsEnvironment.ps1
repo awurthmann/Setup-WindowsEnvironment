@@ -13,7 +13,7 @@
 #
 # --------------------------------------------------------------------------------------------
 # Name: Setup-WindowsEnvironment.ps1
-# Version: 2021.10.25.0805
+# Version: 2021.10.25.1033
 # Description: Setup Windows Environment on my Test System(s)
 # 
 # Instructions: Run from PowerShell with Administrator permissions and Set-ExecutionPolicy Bypass -Scope Process -Force
@@ -758,6 +758,7 @@ function Set-WindowsExplorerView {
 		Write-Host "I prefer the following custom Windows Explorer settings:" -ForegroundColor Yellow
 		Write-Host " Show Hidden Items and File Extensions, Hide the People Icon" -ForegroundColor Yellow
 		Write-Host " Show all tray icons, Show Search icon, Use Dark Gray Desktop" -ForegroundColor Yellow
+		Write-Host " Hide the Chat Icon (Windows 11), Disable 'Shake to Minimize'" -ForegroundColor Yellow
 		Write-Host " Remove Microsoft Store icon, Use Windows Dark Mode Theme" -ForegroundColor Yellow
 		Write-Host ""
 		$msg="Do you want to set custom Windows Explorer Settings, [Y]Yes, [N]No"
@@ -801,8 +802,17 @@ function Set-WindowsExplorerView {
 	$appname = "Microsoft Store"
 	((New-Object -Com Shell.Application).NameSpace('shell:::{4234d49b-0245-4df3-b780-3893943456e1}').Items() | ?{$_.Name -eq $appname}).Verbs() | ?{$_.Name.replace('&','') -match 'Unpin from taskbar'} | %{$_.DoIt(); $exec = $true}
 	
+	Write-Host "Disable Shake to Minimize" -ForegroundColor DarkGreen
+	Set-ItemProperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name DisallowShaking -Value 1
+	
+	If (isWindows11) {
+		Write-Host "Hiding Chat Icon" -ForegroundColor DarkGreen
+		Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarMn" -Type DWord -Value 0
+	}
+	
 	Write-Host "Enabling Dark Mode" -ForegroundColor DarkGreen
 	Set-ItemProperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize -Name AppsUseLightTheme -Value 0
+	
 	
 	Write-Host "$MyCommand Completed" -ForegroundColor DarkGreen
 	Write-Log $LogFile "$MyCommand Completed"
@@ -1276,11 +1286,6 @@ function Remove-UnwantedApps {
         Write-Host "If present, removing $App." -ForegroundColor DarkGreen
 		Write-Log $LogFile "If present, removing $App."
     }
-	
-	If (isWindows11) {
-		New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Force -ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Out-Null
-		Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarMn" -Type DWord -Value 0
-	}
 	
 	Write-Log $LogFile "$($MyInvocation.MyCommand) Completed"
 }

@@ -13,7 +13,7 @@
 #
 # --------------------------------------------------------------------------------------------
 # Name: Setup-WindowsEnvironment.ps1
-# Version: 2021.10.22.1757
+# Version: 2021.10.25.0805
 # Description: Setup Windows Environment on my Test System(s)
 # 
 # Instructions: Run from PowerShell with Administrator permissions and Set-ExecutionPolicy Bypass -Scope Process -Force
@@ -951,7 +951,7 @@ function Install-BaseApps {
 		"notepadplusplus.install"="Notepad++";
 		"signal"="Signal";
 		"slack"="Slack";
-		#"sysinternals"="Sysinternals";
+		"sysinternals"="Sysinternals";
 		"vlc"="VLC Media Player";
 		"vnc-viewer"="VNC Viewer Desktop Client";
 		"zoom"="Zoom Cloud Meetings"
@@ -984,86 +984,85 @@ function Install-BaseApps {
 	Write-Log $LogFile "$MyCommand Completed"
 }
 
-function Install-Sysinternals {
-	Param ([bool]$Confirm)
+##Not Added Yet - Uses winget is not included with Windows 11 Yet
+# function Install-Sysinternals {
+	# Param ([bool]$Confirm)
 	
-	If (Test-Path "$([Environment]::GetFolderPath('LocalApplicationData'))\Microsoft\WindowsApps\autoruns.exe"){return}
+	# If (Test-Path "$([Environment]::GetFolderPath('LocalApplicationData'))\Microsoft\WindowsApps\autoruns.exe"){return}
 	
-	[string]$MyCommand=$($MyInvocation.MyCommand)
-	Write-Progress -Activity "Setting Up Windows Environment" -Status "$MyCommand"
-	Write-Host ""
-	Write-Host "$MyCommand" -ForegroundColor Green
-	Write-Log $LogFile "$MyCommand"
+	# [string]$MyCommand=$($MyInvocation.MyCommand)
+	# Write-Progress -Activity "Setting Up Windows Environment" -Status "$MyCommand"
+	# Write-Host ""
+	# Write-Host "$MyCommand" -ForegroundColor Green
+	# Write-Log $LogFile "$MyCommand"
 	
-	If ($Confirm){
-		Write-Host "Sysinternals Suite is a bundle of the utilities including: Process Explorer," -ForegroundColor Yellow
-		Write-Host "Process Monitor, Sysmon, Autoruns, all of the PsTools, and many more" -ForegroundColor Yellow
-		Write-Host -NoNewLine "Read More: " -ForegroundColor Yellow
-		Write-Host "https://www.sysinternals.com" -ForegroundColor Blue
-		Write-Host ""
-		$msg="Do you want to install Microsoft's Sysinernals, [Y]Yes, [N]No"
-		choice /c yn /m $msg
-		switch ($LASTEXITCODE){
-			1 {$Proceed=$True}
-			2 {$Proceed=$False}
-		}
-	}
-	Else {$Proceed=$True}
-	If (!($Proceed)){
-		Write-Host "$MyCommand Skipped" 
-		Write-Log $LogFile "$MyCommand Skipped"
-		return
-	}
+	# If ($Confirm){
+		# Write-Host "Sysinternals Suite is a bundle of the utilities including: Process Explorer," -ForegroundColor Yellow
+		# Write-Host "Process Monitor, Sysmon, Autoruns, all of the PsTools, and many more" -ForegroundColor Yellow
+		# Write-Host -NoNewLine "Read More: " -ForegroundColor Yellow
+		# Write-Host "https://www.sysinternals.com" -ForegroundColor Blue
+		# Write-Host ""
+		# $msg="Do you want to install Microsoft's Sysinernals, [Y]Yes, [N]No"
+		# choice /c yn /m $msg
+		# switch ($LASTEXITCODE){
+			# 1 {$Proceed=$True}
+			# 2 {$Proceed=$False}
+		# }
+	# }
+	# Else {$Proceed=$True}
+	# If (!($Proceed)){
+		# Write-Host "$MyCommand Skipped" 
+		# Write-Log $LogFile "$MyCommand Skipped"
+		# return
+	# }
 
-	Write-Host "Attempting to install 'sysinternals' via 'winget'" -ForegroundColor DarkGreen
-	Write-Log $LogFile "Attempting to install 'sysinternals' via 'winget'"
+	# Write-Host "Attempting to install 'sysinternals' via 'winget'" -ForegroundColor DarkGreen
+	# Write-Log $LogFile "Attempting to install 'sysinternals' via 'winget'"
 
-	winget install sysinternals
+	# winget install sysinternals
 
-	Write-Host "$MyCommand Completed" -ForegroundColor DarkGreen
-	Write-Log $LogFile "$MyCommand Completed"
-}
+	# Write-Host "$MyCommand Completed" -ForegroundColor DarkGreen
+	# Write-Log $LogFile "$MyCommand Completed"
+# }
 
-
-##Not Added Yet
-function Install-PowerToys {
-	Param ([bool]$Confirm)
+# function Install-PowerToys {
+	# Param ([bool]$Confirm)
 	
-	If (Test-Path "$([Environment]::GetFolderPath('LocalApplicationData'))\Microsoft\WindowsApps\autoruns.exe"){return}
+	# If (Test-Path "$([Environment]::GetFolderPath('LocalApplicationData'))\Microsoft\WindowsApps\autoruns.exe"){return}
 	
-	[string]$MyCommand=$($MyInvocation.MyCommand)
-	Write-Progress -Activity "Setting Up Windows Environment" -Status "$MyCommand"
-	Write-Host ""
-	Write-Host "$MyCommand" -ForegroundColor Green
-	Write-Log $LogFile "$MyCommand"
+	# [string]$MyCommand=$($MyInvocation.MyCommand)
+	# Write-Progress -Activity "Setting Up Windows Environment" -Status "$MyCommand"
+	# Write-Host ""
+	# Write-Host "$MyCommand" -ForegroundColor Green
+	# Write-Log $LogFile "$MyCommand"
 	
-	If ($Confirm){
-		Write-Host "Microsoft PowerToys is a set of utilities for power users to tune and streamline their Windows experience for greater productivity." -ForegroundColor Yellow
-		Write-Host -NoNewLine "Read More: " -ForegroundColor Yellow
-		Write-Host "https://docs.microsoft.com/en-us/windows/powertoys/" -ForegroundColor Blue
-		Write-Host ""
-		$msg="Do you want to install Microsoft's PowerToys, [Y]Yes, [N]No"
-		choice /c yn /m $msg
-		switch ($LASTEXITCODE){
-			1 {$Proceed=$True}
-			2 {$Proceed=$False}
-		}
-	}
-	Else {$Proceed=$True}
-	If (!($Proceed)){
-		Write-Host "$MyCommand Skipped" 
-		Write-Log $LogFile "$MyCommand Skipped"
-		return
-	}
+	# If ($Confirm){
+		# Write-Host "Microsoft PowerToys is a set of utilities for power users to tune and streamline their Windows experience for greater productivity." -ForegroundColor Yellow
+		# Write-Host -NoNewLine "Read More: " -ForegroundColor Yellow
+		# Write-Host "https://docs.microsoft.com/en-us/windows/powertoys/" -ForegroundColor Blue
+		# Write-Host ""
+		# $msg="Do you want to install Microsoft's PowerToys, [Y]Yes, [N]No"
+		# choice /c yn /m $msg
+		# switch ($LASTEXITCODE){
+			# 1 {$Proceed=$True}
+			# 2 {$Proceed=$False}
+		# }
+	# }
+	# Else {$Proceed=$True}
+	# If (!($Proceed)){
+		# Write-Host "$MyCommand Skipped" 
+		# Write-Log $LogFile "$MyCommand Skipped"
+		# return
+	# }
 
-	Write-Host "Attempting to install 'powertoys' via 'winget'" -ForegroundColor DarkGreen
-	Write-Log $LogFile "Attempting to install 'powertoys' via 'winget'"
+	# Write-Host "Attempting to install 'powertoys' via 'winget'" -ForegroundColor DarkGreen
+	# Write-Log $LogFile "Attempting to install 'powertoys' via 'winget'"
 
-	winget install powertoys
+	# winget install powertoys
 
-	Write-Host "$MyCommand Completed" -ForegroundColor DarkGreen
-	Write-Log $LogFile "$MyCommand Completed"
-}
+	# Write-Host "$MyCommand Completed" -ForegroundColor DarkGreen
+	# Write-Log $LogFile "$MyCommand Completed"
+# }
 ##Not Added Yet
 
 function Install-WindowsFirewallControl {
@@ -1855,7 +1854,7 @@ If($localAdmin -and $internetAccess) {
 			#
 		}
 	##End Chocolatey Installations
-	Install-Sysinternals $ConfirmInstallSysinternals
+	#Install-Sysinternals $ConfirmInstallSysinternals #Uses winget, which is not included in Windows 11 yet
 	Remove-UnwantedApps $ConfirmRemoveUnwantedApps
 	Disable-EdgeDefaults $ConfirmDisableEdgeDefaults
 	Set-SecuritySettings $ConfirmSetSecuritySettings

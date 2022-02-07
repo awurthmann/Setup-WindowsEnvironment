@@ -1,7 +1,7 @@
 # Setup-WindowsEnvironment
 
-Script used to re-setup my test system(s) after being reset to "Factory Defaults". 
-This script and its default options are specific to my needs. You may need to edit this script yourself for your own.
+Script used to re-setup my test system(s) after being reset to "Factory Defaults". This includes adding the Chocolatey Windows package manager https://chocolatey.org/, removing unwanted software, installing additional software, making security, privacy and use ability related settiongs.
+The current version of this script prompts you for each section after providing a summary of the suggested change. There is also the ability to skip the prompts via the myOverrides section (which is often what I do). Future versions of the script will write a log of the changes made as well as clean-up the prompts to a consistent format.
 
 ## Legal
 You the executor, runner, user accept all liability.

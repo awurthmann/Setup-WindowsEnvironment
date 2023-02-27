@@ -13,7 +13,7 @@
 #
 # --------------------------------------------------------------------------------------------
 # Name: Setup-WindowsEnvironment.ps1
-# Version: 2021.10.25.1033
+# Version: 2023.02.27.1339
 # Description: Setup Windows Environment on my Test System(s)
 # 
 # Instructions: Run from PowerShell with Administrator permissions and Set-ExecutionPolicy Bypass -Scope Process -Force
@@ -141,7 +141,6 @@ function isServiceEnabled {
 	Else{
 		return $False
 	}
-	
 }
 
 function isWindows11 {
@@ -155,47 +154,70 @@ function Write-Log {
 	$LineValue >> $LogPath
 }
 
+function Write-Line{
+	Param (
+		[string]$Message,
+		[string]$LogPath,
+		[string]$ForegroundColor,
+		[string]$BackgroundColor,
+		[bool]$Output=$True
+	)
+
+	#Log
+	If ($Message -and $LogPath){
+		[string]$LineValue = "PS (C) ["+(Get-Date -Format HH:mm:ss:fff)+"]: $Message"
+		$LineValue >> $LogPath
+	}
+	
+	#Output
+	If($Output){
+		If (!($ForegroundColor)) {$ForegroundColor=$((Get-Host).UI.RawUI.ForegroundColor)}
+		If (!($BackgroundColor)) {$BackgroundColor=$((Get-Host).UI.RawUI.BackgroundColor)}
+		Write-Host $Message -ForegroundColor $ForegroundColor -BackgroundColor $BackgroundColor
+	}
+
+}
+
 ###Unused Service Related Functions
-# function isServiceRunning {
-	# Param ([string]$ServiceName)
-	# Return $(Get-Service $ServiceName -WarningAction SilentlyContinue -ErrorAction SilentlyContinue).Status -eq "Running"
-# }
+# "function isServiceRunning {
+	# "Param ([string]$ServiceName)
+	# "Return $(Get-Service $ServiceName -WarningAction SilentlyContinue -ErrorAction SilentlyContinue).Status -eq "Running"
+# "}
 ###End Unused Service Related Functions
 
 
 function Create-RestorePoint {
 	
+	Write-Line ""
 	$MyCommand=$($MyInvocation.MyCommand)
-	Write-Log $LogFile "$($MyCommand)"
-	Write-Progress -Activity "Setting Up Windows Environment" -Status "$($MyCommand)"
-	Write-Host ""
-	Write-Host "Creating Restore Point..." -ForegroundColor Green
-	Write-Log $LogFile " Enabling Restore Feature for Drive: $($env:SystemDrive)"
-	Enable-ComputerRestore -Drive $env:SystemDrive -ErrorAction Stop
-	Write-Log $LogFile " Creating Restore Point Named: 'RP: $(Get-Date -Format yyyyMMdd-HHmmssfff:TK)'"
-	Checkpoint-Computer -Description "RP: $(Get-Date -Format yyyyMMdd-HHmmssfff:TK)" -RestorePointType "MODIFY_SETTINGS" -ErrorAction Stop -WarningAction SilentlyContinue -WarningVariable CapturedWarning
-	If ($CapturedWarning){
-		Write-Log $LogFile "$CapturedWarning"
-		$Result="Warning"
-	}
+	Write-Line -Message "$MyCommand" -LogPath $LogFile -ForegroundColor Cyan
 	
-	If(!($Result)){$Result="No Errors"}
-	Write-Log $LogFile "$($MyCommand) Completed with Result: $Result"
+	Write-Line -Message " Enabling Restore Feature for Drive: $($env:SystemDrive)" -LogPath $LogFile -ForegroundColor DarkCyan
+	Enable-ComputerRestore -Drive $env:SystemDrive -ErrorAction Stop
+	
+	Write-Line -Message " Creating Restore Point Named: 'RP: $(Get-Date -Format yyyyMMdd-HHmmssfff:TK)'" -LogPath $LogFile -ForegroundColor DarkCyan
+	Checkpoint-Computer -Description "RP: $(Get-Date -Format yyyyMMdd-HHmmssfff:TK)" -RestorePointType "MODIFY_SETTINGS" -ErrorAction Stop -WarningAction SilentlyContinue -WarningVariable CapturedWarning
+	
+	If ($CapturedWarning){
+		Write-Line -Message " [WARNING] $CapturedWarning" -LogPath $LogFile -ForegroundColor Yellow -BackgroundColor Black
+		Write-Line -Message " $MyCommand Completed with Result: Warning" -LogPath $LogFile -ForegroundColor Yellow
+	}
+	Else{
+		Write-Line -Message " $MyCommand Completed with Result: No Errors" -LogPath $LogFile -ForegroundColor Green
+	}
 }
 
 function Set-Profile {
 	Param ([bool]$Confirm)
 	
-	[string]$MyCommand=$($MyInvocation.MyCommand)
-	Write-Progress -Activity "Setting Up Windows Environment" -Status "$MyCommand"
-	Write-Host ""
-	Write-Host "$MyCommand" -ForegroundColor Green
-	Write-Log $LogFile "$MyCommand"
+	Write-Line ""
+	$MyCommand=$($MyInvocation.MyCommand)
+	Write-Line -Message "$MyCommand" -LogPath $LogFile -ForegroundColor Cyan
 
 	If ($Confirm) {
 		$Proceed=$False
 		Write-Host -NoNewLine "I prefer a custom PowerShell profile, a custom prompt and functions.`n As seen here: " -ForegroundColor Yellow
-		Write-Host "https://raw.githubusercontent.com/awurthmann/my-powershell-profile/main/Profile.ps1" -ForegroundColor Blue
+		Write-Host "https://raw.githubusercontent.com/awurthmann/my-powershell-profile/main/Profile.ps1"
 		Write-Host -NoNewLine " To enable this profile the PowerShell Execution Policy is set to " -ForegroundColor Yellow
 		Write-Host "RemoteSigned" -ForegroundColor Red
 		
@@ -209,41 +231,48 @@ function Set-Profile {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Log $LogFile "$MyCommand Skipped"
+		Write-Line $LogFile "$MyCommand Skipped"
 		return
 	}
 	
-	Write-Host ""
-	Write-Host "Import Profile..." -ForegroundColor DarkGreen
-	Write-Log $LogFile " Importing Profile: 'https://raw.githubusercontent.com/awurthmann/my-powershell-profile/main/Set-Profile.ps1'"
+	Write-Line ""
+	Write-Line -Message " Importing Profile: 'https://raw.githubusercontent.com/awurthmann/my-powershell-profile/main/Set-Profile.ps1'" -LogPath $LogFile -ForegroundColor DarkCyan
 	
 	try{
 		iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/awurthmann/my-powershell-profile/main/Set-Profile.ps1'))
 	}
 	catch{
 		$Result="Error"
-		Write-Log $LogFile $_.Exception.Message
+		Write-Line -Message " $_.Exception.Message" -LogPath $LogFile -ForegroundColor Red -BackgroundColor Black
 	}
 	
 	If ($Result -ne "Error"){
-		Write-Host "Setting Execution Policy to 'RemoteSigned'" -ForegroundColor DarkGreen
-		Write-Log $LogFile " Setting Execution Policy to 'RemoteSigned'"
-		Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
+		Write-Line -Message " Custom profile successfully imported" -LogPath $LogFile -ForegroundColor DarkCyan
+		Write-Line -Message " Setting Execution Policy to 'RemoteSigned'" -LogPath $LogFile -ForegroundColor DarkCyan
+		
+		try {
+			Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
+		}
+		catch{
+			$Result="Error"
+			Write-Line -Message " $_.Exception.Message" -LogPath $LogFile -ForegroundColor Red -BackgroundColor Black
+		}
+		If ($Result -ne "Error"){
+			Write-Line -Message " $MyCommand Completed with Result: No Errors" -LogPath $LogFile -ForegroundColor Green
+		}
+		Else{
+			Write-Line -Message " $MyCommand Completed with Result: $Result" -LogPath $LogFile -ForegroundColor Red -BackgroundColor Black
+		}
+		
 	}
-
-	If(!($Result)){$Result="No Errors"}
-	
-	Write-Host "$MyCommand Completed with Result: $Result" -ForegroundColor DarkGreen
-	Write-Log $LogFile "$MyCommand Completed with Result: $Result"	
 }
 
 function Disable-Telemetry {
 	Param ([bool]$Confirm)
 	
-	Write-Log $LogFile "$($MyInvocation.MyCommand)"
-	Write-Progress -Activity "Setting Up Windows Environment" -Status "Disable-Telemetry"
-	Write-Host ""
-	Write-Host "Disable Telemetry..." -ForegroundColor Green
+	Write-Line ""
+	$MyCommand=$($MyInvocation.MyCommand)
+	Write-Line -Message "$MyCommand" -LogPath $LogFile -ForegroundColor Cyan
 
 	If ($Confirm) {
 		$Proceed=$False
@@ -260,7 +289,7 @@ function Disable-Telemetry {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Log $LogFile "$($MyInvocation.MyCommand) Skipped"
+		Write-Line -Message "$MyCommand Skipped" -LogPath $LogFile -ForegroundColor Yellow
 		return
 	}
 	
@@ -283,28 +312,28 @@ function Disable-Telemetry {
 	$currErrorActionPreference = $ErrorActionPreference
 	$ErrorActionPreference = 'Stop'
 	ForEach ($cmd in $cmds) {
-		If ($cmd -notlike "Write-Host*"){Write-Log $LogFile $cmd}
+		If ($cmd -notlike "Write-*"){Write-Line -Message " $cmd" -LogPath $LogFile -Output $False}
 		try {
 			Invoke-Expression $cmd
 		}
 		catch {
-			Write-Log $LogFile " ERROR: $($_.Exception.Message)"
+			Write-Line -Message "  [ERROR] $($_.Exception.Message)" -LogPath $LogFile -ForegroundColor Red -BackgroundColor Black
 			$cmdError=$True
 		}
-		If ((!($cmdError)) -and ($cmd -notlike "Write-Host*")) {Write-Log $LogFile " Success"}
+		If ((!($cmdError)) -and ($cmd -notlike "Write-*")) {Write-Line -Message "  Success" -LogPath $LogFile -Output $False}
+		Clear-Variable cmdError -ErrorAction SilentlyContinue
 	}
 	$ErrorActionPreference = $currErrorActionPreference
-	
-	Write-Log $LogFile "$($MyInvocation.MyCommand) Completed"
+		
+	Write-Line -Message " $MyCommand Completed" -LogPath $LogFile -ForegroundColor DarkCyan
 }
 
 function Disable-ApplicationSuggestions {
 	Param ([bool]$Confirm)
 	
-	Write-Progress -Activity "Setting Up Windows Environment" -Status "Disable-ApplicationSuggestions"
-	Write-Host ""
-	Write-Host "Disable Application Suggestions..." -ForegroundColor Green
-	Write-Log $LogFile "$($MyInvocation.MyCommand)"
+	Write-Line ""
+	$MyCommand=$($MyInvocation.MyCommand)
+	Write-Line -Message "$MyCommand" -LogPath $LogFile -ForegroundColor Cyan
 	
 	If ($Confirm) {
 		$Proceed=$False
@@ -321,23 +350,9 @@ function Disable-ApplicationSuggestions {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Log $LogFile "$($MyInvocation.MyCommand) Skipped"
+		Write-Line -Message "$MyCommand Skipped" -LogPath $LogFile -ForegroundColor Yellow
 		return
 	}
-	
-	
-	# Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "ContentDeliveryAllowed" -Type DWord -Value 0
-	# Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "OemPreInstalledAppsEnabled" -Type DWord -Value 0
-	# Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "PreInstalledAppsEnabled" -Type DWord -Value 0
-	# Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "PreInstalledAppsEverEnabled" -Type DWord -Value 0
-	# Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SilentInstalledAppsEnabled" -Type DWord -Value 0
-	# Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SubscribedContent-338387Enabled" -Type DWord -Value 0
-	# Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SubscribedContent-338388Enabled" -Type DWord -Value 0
-	# Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SubscribedContent-338389Enabled" -Type DWord -Value 0
-	# Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SubscribedContent-353698Enabled" -Type DWord -Value 0
-	# Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SystemPaneSuggestionsEnabled" -Type DWord -Value 0
-	# New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Force -WarningAction SilentlyContinue| Out-Null
-	# Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsConsumerFeatures" -Type DWord -Value 1
 	
 	$cmds=@(
 		"Set-ItemProperty -Path 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -Name 'ContentDeliveryAllowed' -Type DWord -Value 0 | Out-Null",
@@ -357,28 +372,28 @@ function Disable-ApplicationSuggestions {
 	$currErrorActionPreference = $ErrorActionPreference
 	$ErrorActionPreference = 'Stop'
 	ForEach ($cmd in $cmds) {
-		If ($cmd -notlike "Write-Host*"){Write-Log $LogFile $cmd}
+		If ($cmd -notlike "Write-*"){Write-Line -Message " $cmd" -LogPath $LogFile -Output $False}
 		try {
 			Invoke-Expression $cmd
 		}
 		catch {
-			Write-Log $LogFile " ERROR: $($_.Exception.Message)"
+			Write-Line -Message "  [ERROR] $($_.Exception.Message)" -LogPath $LogFile -ForegroundColor Red -BackgroundColor Black
 			$cmdError=$True
 		}
-		If ((!($cmdError)) -and ($cmd -notlike "Write-Host*")) {Write-Log $LogFile " Success"}
+		If ((!($cmdError)) -and ($cmd -notlike "Write-*")) {Write-Line -Message "  Success" -LogPath $LogFile -Output $False}
+		Clear-Variable cmdError -ErrorAction SilentlyContinue
 	}
 	$ErrorActionPreference = $currErrorActionPreference
-	
-	Write-Log $LogFile "$($MyInvocation.MyCommand) Completed"
+
+	Write-Line -Message " $MyCommand Completed" -LogPath $LogFile -ForegroundColor DarkCyan
 }
 
 function Disable-ActivityHistory {
 	Param ([bool]$Confirm)
 	
-	Write-Progress -Activity "Setting Up Windows Environment" -Status "Disable-ActivityHistory"
-	Write-Host ""
-	Write-Host "Disable Activity History..." -ForegroundColor Green
-	Write-Log $LogFile "$($MyInvocation.MyCommand)"
+	Write-Line ""
+	$MyCommand=$($MyInvocation.MyCommand)
+	Write-Line -Message "$MyCommand" -LogPath $LogFile -ForegroundColor Cyan
 	
 	If ($Confirm) {
 		$Proceed=$False
@@ -395,14 +410,9 @@ function Disable-ActivityHistory {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Log $LogFile "$($MyInvocation.MyCommand) Skipped"
+		Write-Line -Message "$MyCommand Skipped" -LogPath $LogFile -ForegroundColor Yellow
 		return
 	}
-	
-	
-	# Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableActivityFeed" -Type DWord -Value 0
-	# Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System" -Name "PublishUserActivities" -Type DWord -Value 0
-	# Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System" -Name "UploadUserActivities" -Type DWord -Value 0
 	
 	$cmds=@(
 		"Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System' -Name 'EnableActivityFeed' -Type DWord -Value 0 | Out-Null",
@@ -413,32 +423,31 @@ function Disable-ActivityHistory {
 	$currErrorActionPreference = $ErrorActionPreference
 	$ErrorActionPreference = 'Stop'
 	ForEach ($cmd in $cmds) {
-		If ($cmd -notlike "Write-Host*"){Write-Log $LogFile $cmd}
+		If ($cmd -notlike "Write-*"){Write-Line -Message " $cmd" -LogPath $LogFile -Output $False}
 		try {
 			Invoke-Expression $cmd
 		}
 		catch {
-			Write-Log $LogFile " ERROR: $($_.Exception.Message)"
+			Write-Line -Message "  [ERROR] $($_.Exception.Message)" -LogPath $LogFile -ForegroundColor Red -BackgroundColor Black
 			$cmdError=$True
 		}
-		If ((!($cmdError)) -and ($cmd -notlike "Write-Host*")) {Write-Log $LogFile " Success"}
+		If ((!($cmdError)) -and ($cmd -notlike "Write-*")) {Write-Line -Message "  Success" -LogPath $LogFile -Output $False}
+		Clear-Variable cmdError -ErrorAction SilentlyContinue
 	}
 	$ErrorActionPreference = $currErrorActionPreference
-	
-	Write-Log $LogFile "$($MyInvocation.MyCommand) Completed"
+
+	Write-Line -Message " $MyCommand Completed" -LogPath $LogFile -ForegroundColor DarkCyan
 }
 
 function Disable-LocationTracking {
 	Param ([bool]$Confirm)
 	
-	Write-Progress -Activity "Setting Up Windows Environment" -Status "Disable-LocationTracking"
-	Write-Host ""
-	Write-Host "Disable Location Tracking..." -ForegroundColor Green
-	Write-Log $LogFile "$($MyInvocation.MyCommand)"
+	Write-Line ""
+	$MyCommand=$($MyInvocation.MyCommand)
+	Write-Line -Message "$MyCommand" -LogPath $LogFile -ForegroundColor Cyan
 	
 	If ($Confirm) {
 		$Proceed=$False
-		#Write-Host ""
 		Write-Host "When the device location setting is enabled, the Microsoft location service will" -ForegroundColor Yellow
 		Write-Host "use a combination of (GPS), nearby wireless access points, cell towers, and" -ForegroundColor Yellow
 		Write-Host "your IP address to determine your device’s location." -ForegroundColor Yellow
@@ -453,33 +462,19 @@ function Disable-LocationTracking {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Log $LogFile "$($MyInvocation.MyCommand) Skipped"
+		Write-Line -Message "$MyCommand Skipped" -LogPath $LogFile -ForegroundColor Yellow
 		return
 	}
 	
-	# Write-Host "Disabling Location Tracking..." -ForegroundColor Green
-	# If (!(Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location")){
-		# New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" -Force | Out-Null}
-	# Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" -Name "Value" -Type String -Value "Deny"
-	# Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" -Name "SensorPermissionState" -Type DWord -Value 0
-	# Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\lfsvc\Service\Configuration" -Name "Status" -Type DWord -Value 0
-
-	# Write-Host "Disabling automatic Maps updates..." -ForegroundColor Green
-	# Set-ItemProperty -Path "HKLM:\SYSTEM\Maps" -Name "AutoUpdateEnabled" -Type DWord -Value 0
-	
-	# Write-Host "Stopping and disabling Geolocation Service..." -ForegroundColor DarkGreen
-	# Stop-Service "lfsvc" -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
-	# Set-Service "lfsvc" -StartupType Disabled -WarningAction SilentlyContinue
-	
 	$cmds=@(
-		"Write-Host 'Disabling Location Tracking...' -ForegroundColor Green",
+		"Write-Host 'Disabling Location Tracking...' -ForegroundColor DarkCyan",
 		"New-Item -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location' -Force -WarningAction SilentlyContinue | Out-Null",
 		"Set-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location' -Name 'Value' -Type String -Value 'Deny' | Out-Null",
 		"Set-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}' -Name 'SensorPermissionState' -Type DWord -Value 0 | Out-Null",
 		"Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Services\lfsvc\Service\Configuration' -Name 'Status' -Type DWord -Value 0 | Out-Null",
-		"Write-Host 'Disabling automatic Maps updates...' -ForegroundColor Green",
+		"Write-Host 'Disabling automatic Maps updates...' -ForegroundColor DarkCyan",
 		"Set-ItemProperty -Path 'HKLM:\SYSTEM\Maps' -Name 'AutoUpdateEnabled' -Type DWord -Value 0 | Out-Null",
-		"Write-Host 'Stopping and disabling Geolocation Service...' -ForegroundColor DarkGreen",
+		"Write-Host 'Stopping and disabling Geolocation Service...' -ForegroundColor DarkCyan",
 		"Stop-Service 'lfsvc' -WarningAction SilentlyContinue | Out-Null",
 		"Set-Service 'lfsvc' -StartupType Disabled -WarningAction SilentlyContinue | Out-Null"
 	)
@@ -487,28 +482,28 @@ function Disable-LocationTracking {
 	$currErrorActionPreference = $ErrorActionPreference
 	$ErrorActionPreference = 'Stop'
 	ForEach ($cmd in $cmds) {
-		If ($cmd -notlike "Write-Host*"){Write-Log $LogFile $cmd}
+		If ($cmd -notlike "Write-*"){Write-Line -Message " $cmd" -LogPath $LogFile -Output $False}
 		try {
 			Invoke-Expression $cmd
 		}
 		catch {
-			Write-Log $LogFile " ERROR: $($_.Exception.Message)"
+			Write-Line -Message "  [ERROR] $($_.Exception.Message)" -LogPath $LogFile -ForegroundColor Red -BackgroundColor Black
 			$cmdError=$True
 		}
-		If ((!($cmdError)) -and ($cmd -notlike "Write-Host*")) {Write-Log $LogFile " Success"}
+		If ((!($cmdError)) -and ($cmd -notlike "Write-*")) {Write-Line -Message "  Success" -LogPath $LogFile -Output $False}
+		Clear-Variable cmdError -ErrorAction SilentlyContinue
 	}
 	$ErrorActionPreference = $currErrorActionPreference
-	
-	Write-Log $LogFile "$($MyInvocation.MyCommand) Completed"
+
+	Write-Line -Message " $MyCommand Completed" -LogPath $LogFile -ForegroundColor DarkCyan
 }
 
 function Disable-Feedback {
 	Param ([bool]$Confirm)
 	
-	Write-Progress -Activity "Setting Up Windows Environment" -Status "Disable-Feedback"
-	Write-Host ""
-	Write-Host "Disable Feedback..." -ForegroundColor Green
-	Write-Log $LogFile "$($MyInvocation.MyCommand)"
+	Write-Line ""
+	$MyCommand=$($MyInvocation.MyCommand)
+	Write-Line -Message "$MyCommand" -LogPath $LogFile -ForegroundColor Cyan
 	
 	If ($Confirm) {
 		$Proceed=$False
@@ -524,49 +519,42 @@ function Disable-Feedback {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Log $LogFile "$($MyInvocation.MyCommand) Skipped"
+		Write-Line -Message "$MyCommand Skipped" -LogPath $LogFile -ForegroundColor Yellow
 		return
 	}
-	
-	# New-Item -Path "HKCU:\SOFTWARE\Microsoft\Siuf\Rules" -Force -WarningAction SilentlyContinue | Out-Null
-	# Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Siuf\Rules" -Name "NumberOfSIUFInPeriod" -Type DWord -Value 0 | Out-Null
-	# Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection" -Name "DoNotShowFeedbackNotifications" -Type DWord -Value 1 | Out-Null
-	# Disable-ScheduledTask -TaskName "Microsoft\Windows\Feedback\Siuf\DmClient" -ErrorAction SilentlyContinue | Out-Null
-	# Disable-ScheduledTask -TaskName "Microsoft\Windows\Feedback\Siuf\DmClientOnScenarioDownload" -ErrorAction SilentlyContinue | Out-Null	New-Item -Path "HKCU:\SOFTWARE\Microsoft\Siuf\Rules" -Force -WarningAction SilentlyContinue | Out-Null
 	
 	$cmds=@(
 		"Set-ItemProperty -Path 'HKCU:\SOFTWARE\Microsoft\Siuf\Rules' -Name 'NumberOfSIUFInPeriod' -Type DWord -Value 0 | Out-Null",
 		"Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection' -Name 'DoNotShowFeedbackNotifications' -Type DWord -Value 1 | Out-Null",
 		"Disable-ScheduledTask -TaskName 'Microsoft\Windows\Feedback\Siuf\DmClient' -ErrorAction SilentlyContinue | Out-Null",
 		"Disable-ScheduledTask -TaskName 'Microsoft\Windows\Feedback\Siuf\DmClientOnScenarioDownload' -ErrorAction SilentlyContinue | Out-Null"
-		
 	)
 	
 	$currErrorActionPreference = $ErrorActionPreference
 	$ErrorActionPreference = 'Stop'
 	ForEach ($cmd in $cmds) {
-		If ($cmd -notlike "Write-Host*"){Write-Log $LogFile $cmd}
+		If ($cmd -notlike "Write-*"){Write-Line -Message " $cmd" -LogPath $LogFile -Output $False}
 		try {
 			Invoke-Expression $cmd
 		}
 		catch {
-			Write-Log $LogFile " ERROR: $($_.Exception.Message)"
+			Write-Line -Message "  [ERROR] $($_.Exception.Message)" -LogPath $LogFile -ForegroundColor Red -BackgroundColor Black
 			$cmdError=$True
 		}
-		If ((!($cmdError)) -and ($cmd -notlike "Write-Host*")) {Write-Log $LogFile " Success"}
+		If ((!($cmdError)) -and ($cmd -notlike "Write-*")) {Write-Line -Message "  Success" -LogPath $LogFile -Output $False}
+		Clear-Variable cmdError -ErrorAction SilentlyContinue
 	}
 	$ErrorActionPreference = $currErrorActionPreference
-	
-	Write-Log $LogFile "$($MyInvocation.MyCommand) Completed"
+
+	Write-Line -Message " $MyCommand Completed" -LogPath $LogFile -ForegroundColor DarkCyan
 }
 
 function Disable-AdTargeting {
 	Param ([bool]$Confirm)
 	
-	Write-Progress -Activity "Setting Up Windows Environment" -Status "Disable-AdTargeting"
-	Write-Host ""
-	Write-Host "Disable Tailored Experiences..." -ForegroundColor Green
-	Write-Log $LogFile "$($MyInvocation.MyCommand)"
+	Write-Line ""
+	$MyCommand=$($MyInvocation.MyCommand)
+	Write-Line -Message "$MyCommand" -LogPath $LogFile -ForegroundColor Cyan
 	
 	If ($Confirm) {
 		$Proceed=$False
@@ -582,53 +570,46 @@ function Disable-AdTargeting {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Log $LogFile "$($MyInvocation.MyCommand) Skipped"
+		Write-Line -Message "$MyCommand Skipped" -LogPath $LogFile -ForegroundColor Yellow
 		return
 	}
 	
-	# New-Item -Path "HKCU:\SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Force -ErrorAction SilentlyContinue | Out-Null
-	# Set-ItemProperty -Path "HKCU:\SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableTailoredExperiencesWithDiagnosticData" -Type DWord -Value 1
-    
-	# Write-Host "Disabling Advertising ID..." -ForegroundColor Green
-	# New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo" -ErrorAction SilentlyContinue | Out-Null
-	# Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo" -Name "DisabledByGroupPolicy" -Type DWord -Value 1	
-	
 	$cmds=@(
-		"Write-Host 'Disabling Tailored Experiences...' -ForegroundColor Green",
-		"Write-Host 'Setting DisableTailoredExperiencesWithDiagnosticData...' -ForegroundColor DarkGreen",
+		"Write-Host 'Disabling Tailored Experiences...' -ForegroundColor Cyan",
+		"Write-Host 'Setting DisableTailoredExperiencesWithDiagnosticData...' -ForegroundColor DarkCyan",
 		"New-Item -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\CloudContent' -Force -ErrorAction SilentlyContinue | Out-Null",
-		"Set-ItenProperty -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\CloudContent' -Name 'DisableTailoredExperiencesWithDiagnosticData' -Type DWord -Value 1 | Out-Null",
+		"Set-ItemProperty -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\CloudContent' -Name 'DisableTailoredExperiencesWithDiagnosticData' -Type DWord -Value 1 | Out-Null",
 
-		"Write-Host 'Disabling AdvertisingInfo via Policy...' -ForegroundColor DarkGreen",
+		"Write-Host 'Disabling AdvertisingInfo via Policy...' -ForegroundColor DarkCyan",
 		"New-Item -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo' -ErrorAction SilentlyContinue | Out-Null",
-		"Set-ItenProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo' -Name 'DisabledByGroupPolicy' -Type DWord -Value 1 | Out-Null"
+		"Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo' -Name 'DisabledByGroupPolicy' -Type DWord -Value 1 | Out-Null"
 	)
 	
 	$currErrorActionPreference = $ErrorActionPreference
 	$ErrorActionPreference = 'Stop'
 	ForEach ($cmd in $cmds) {
-		If ($cmd -notlike "Write-Host*"){Write-Log $LogFile $cmd}
+		If ($cmd -notlike "Write-*"){Write-Line -Message " $cmd" -LogPath $LogFile -Output $False}
 		try {
 			Invoke-Expression $cmd
 		}
 		catch {
-			Write-Log $LogFile " ERROR: $($_.Exception.Message)"
+			Write-Line -Message "  [ERROR] $($_.Exception.Message)" -LogPath $LogFile -ForegroundColor Red -BackgroundColor Black
 			$cmdError=$True
 		}
-		If ((!($cmdError)) -and ($cmd -notlike "Write-Host*")) {Write-Log $LogFile " Success"}
+		If ((!($cmdError)) -and ($cmd -notlike "Write-*")) {Write-Line -Message "  Success" -LogPath $LogFile -Output $False}
+		Clear-Variable cmdError -ErrorAction SilentlyContinue
 	}
 	$ErrorActionPreference = $currErrorActionPreference
-	
-	Write-Log $LogFile "$($MyInvocation.MyCommand) Completed"
+
+	Write-Line -Message " $MyCommand Completed" -LogPath $LogFile -ForegroundColor DarkCyan
 }
 
 function Disable-WindowsP2PUpdates {
 	Param ([bool]$Confirm)
 	
-	Write-Progress -Activity "Setting Up Windows Environment" -Status "Disable-WindowsP2PUpdates"
-	Write-Host ""
-	Write-Host "Disable Windows Update via P2P..." -ForegroundColor Green
-	Write-Log $LogFile "$($MyInvocation.MyCommand)"
+	Write-Line ""
+	$MyCommand=$($MyInvocation.MyCommand)
+	Write-Line -Message "$MyCommand" -LogPath $LogFile -ForegroundColor Cyan
 	
 	If ($Confirm) {
 		$Proceed=$False
@@ -644,27 +625,48 @@ function Disable-WindowsP2PUpdates {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Log $LogFile "$($MyInvocation.MyCommand) Skipped"
+		Write-Line -Message "$MyCommand Skipped" -LogPath $LogFile -ForegroundColor Yellow
 		return
 	}
 	
-	######Left Off Here
+	$cmds=@(
+		"New-Item -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization' -ErrorAction SilentlyContinue | Out-Null",
+		"New-Item -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config' -ErrorAction SilentlyContinue | Out-Null",
+		"Set-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config' -Name 'DODownloadMode' -Type DWord -Value 0 | Out-Null"
+	)
 	
-	If (!(Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization")) {
-		New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization" | Out-Null}
-	If (!(Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config")) {
-		New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config" | Out-Null}
-	Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config" -Name "DODownloadMode" -Type DWord -Value 0
-	Write-Log $LogFile "$($MyInvocation.MyCommand) Completed"
+	# "If (!(Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization")) {
+		# "New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization" | Out-Null}
+	# "If (!(Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config")) {
+		# "New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config" | Out-Null}
+	# "Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config" -Name "DODownloadMode" -Type DWord -Value 0
+	# "Write-Log $LogFile "$($MyInvocation.MyCommand) Completed"
+	
+	$currErrorActionPreference = $ErrorActionPreference
+	$ErrorActionPreference = 'Stop'
+	ForEach ($cmd in $cmds) {
+		If ($cmd -notlike "Write-*"){Write-Line -Message " $cmd" -LogPath $LogFile -Output $False}
+		try {
+			Invoke-Expression $cmd
+		}
+		catch {
+			Write-Line -Message "  [ERROR] $($_.Exception.Message)" -LogPath $LogFile -ForegroundColor Red -BackgroundColor Black
+			$cmdError=$True
+		}
+		If ((!($cmdError)) -and ($cmd -notlike "Write-*")) {Write-Line -Message "  Success" -LogPath $LogFile -Output $False}
+		Clear-Variable cmdError -ErrorAction SilentlyContinue
+	}
+	$ErrorActionPreference = $currErrorActionPreference
+
+	Write-Line -Message " $MyCommand Completed" -LogPath $LogFile -ForegroundColor DarkCyan
 }
 
 function Disable-RemoteAssistance {
 	Param ([bool]$Confirm)
 	
-	Write-Progress -Activity "Setting Up Windows Environment" -Status "Disable-RemoteAssistance"
-	Write-Host ""
-	Write-Host "Disable Remote Assistance..." -ForegroundColor Green
-	Write-Log $LogFile "$($MyInvocation.MyCommand)"
+	Write-Line ""
+	$MyCommand=$($MyInvocation.MyCommand)
+	Write-Line -Message "$MyCommand" -LogPath $LogFile -ForegroundColor Cyan
 	
 	If ($Confirm) {
 		$Proceed=$False
@@ -679,22 +681,42 @@ function Disable-RemoteAssistance {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Log $LogFile "$($MyInvocation.MyCommand) Skipped"
+		Write-Line -Message "$MyCommand Skipped" -LogPath $LogFile -ForegroundColor Yellow
 		return
 	}
 	
-	Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Remote Assistance" -Name "fAllowToGetHelp" -Type DWord -Value 0
-	Write-Log $LogFile "$($MyInvocation.MyCommand) Completed"
+	$cmds=@(
+		"Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Remote Assistance' -Name 'fAllowToGetHelp' -Type DWord -Value 0"
+	)
+	
+	#Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Remote Assistance" -Name "fAllowToGetHelp" -Type DWord -Value 0
+	#Write-Log $LogFile "$($MyInvocation.MyCommand) Completed"
+	
+	$currErrorActionPreference = $ErrorActionPreference
+	$ErrorActionPreference = 'Stop'
+	ForEach ($cmd in $cmds) {
+		If ($cmd -notlike "Write-*"){Write-Line -Message " $cmd" -LogPath $LogFile -Output $False}
+		try {
+			Invoke-Expression $cmd
+		}
+		catch {
+			Write-Line -Message "  [ERROR] $($_.Exception.Message)" -LogPath $LogFile -ForegroundColor Red -BackgroundColor Black
+			$cmdError=$True
+		}
+		If ((!($cmdError)) -and ($cmd -notlike "Write-*")) {Write-Line -Message "  Success" -LogPath $LogFile -Output $False}
+		Clear-Variable cmdError -ErrorAction SilentlyContinue
+	}
+	$ErrorActionPreference = $currErrorActionPreference
+
+	Write-Line -Message " $MyCommand Completed" -LogPath $LogFile -ForegroundColor DarkCyan
 }
 
 function Disable-OneDrive {	
 	Param ([bool]$Confirm=$True)
 	
-	[string]$MyCommand=$($MyInvocation.MyCommand)
-	Write-Progress -Activity "Setting Up Windows Environment" -Status "$MyCommand"
-	Write-Host ""
-	Write-Host "$MyCommand" -ForegroundColor Green
-	Write-Log $LogFile "$MyCommand"
+	Write-Line ""
+	$MyCommand=$($MyInvocation.MyCommand)
+	Write-Line -Message "$MyCommand" -LogPath $LogFile -ForegroundColor Cyan
 	
 	If ($Confirm) {
 		$Proceed=$False
@@ -709,49 +731,93 @@ function Disable-OneDrive {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Host "$MyCommand Skipped" 
-		Write-Log $LogFile "$MyCommand Skipped"
+		Write-Line -Message "$MyCommand Skipped" -LogPath $LogFile -ForegroundColor Yellow
 		return
 	}
+
+	$onedrive = '$env:SYSTEMROOT\SysWOW64\OneDriveSetup.exe'
+	If (!(Test-Path $onedrive)) {
+		$onedrive = '$($env:SYSTEMROOT)\System32\OneDriveSetup.exe'
+		If (!(Test-Path $onedrive)) {
+			Write-Line -Message "$MyCommand Not Applicable" -LogPath $LogFile -ForegroundColor Yellow
+			return
+		}
+	}
 	
-	Write-Host "Disabling OneDrive..." -ForegroundColor DarkGreen
-	Write-Log $LogFile "Disabling OneDrive"
+	If (!(Test-Path 'HKCR:')) {New-PSDrive -Name HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT | Out-Null}
 	
-	If (!(Test-Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive")){
-		New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive" | Out-Null}
-	Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive" -Name "DisableFileSyncNGSC" -Type DWord -Value 1
+	$cmds=@(
+		"New-Item -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive' | Out-Null",
+		"Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive' -Name 'DisableFileSyncNGSC' -Type DWord -Value 1",
+		"Write-Host 'Uninstalling OneDrive...' -ForegroundColor DarkCyan",
+		"Stop-Process -Name 'OneDrive' -ErrorAction SilentlyContinue",
+		"Start-Sleep -s 2",
+		"Start-Process $onedrive '/uninstall' -NoNewWindow -Wait",
+		"Start-Sleep -s 2",
+		"Stop-Process -Name 'explorer' -ErrorAction SilentlyContinue",
+		"Start-Sleep -s 2",
+		"Remove-Item -Path '$env:USERPROFILE\OneDrive' -Force -Recurse -ErrorAction SilentlyContinue",
+		"Remove-Item -Path '$env:LOCALAPPDATA\Microsoft\OneDrive' -Force -Recurse -ErrorAction SilentlyContinue",
+		"Remove-Item -Path '$env:PROGRAMDATA\Microsoft OneDrive' -Force -Recurse -ErrorAction SilentlyContinue",
+		"Remove-Item -Path '$env:SYSTEMDRIVE\OneDriveTemp' -Force -Recurse -ErrorAction SilentlyContinue",
+		"Remove-Item -Path 'HKCR:\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}' -Recurse -ErrorAction SilentlyContinue",
+		"Remove-Item -Path 'HKCR:\Wow6432Node\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}' -Recurse -ErrorAction SilentlyContinue"
+	)
 	
-	Write-Host "Uninstalling OneDrive..." -ForegroundColor DarkGreen
-	Write-Log $LogFile "Uninstalling OneDrive"
+	# "Write-Host "Disabling OneDrive..." -ForegroundColor DarkGreen
+	# "Write-Log $LogFile "Disabling OneDrive"
 	
-	Stop-Process -Name "OneDrive" -ErrorAction SilentlyContinue
-	Start-Sleep -s 2
-	$onedrive = "$env:SYSTEMROOT\SysWOW64\OneDriveSetup.exe"
-	If (!(Test-Path $onedrive)) {$onedrive = "$env:SYSTEMROOT\System32\OneDriveSetup.exe"}
-	Start-Process $onedrive "/uninstall" -NoNewWindow -Wait
-	Start-Sleep -s 2
-	Stop-Process -Name "explorer" -ErrorAction SilentlyContinue
-	Start-Sleep -s 2
-	Remove-Item -Path "$env:USERPROFILE\OneDrive" -Force -Recurse -ErrorAction SilentlyContinue
-	Remove-Item -Path "$env:LOCALAPPDATA\Microsoft\OneDrive" -Force -Recurse -ErrorAction SilentlyContinue
-	Remove-Item -Path "$env:PROGRAMDATA\Microsoft OneDrive" -Force -Recurse -ErrorAction SilentlyContinue
-	Remove-Item -Path "$env:SYSTEMDRIVE\OneDriveTemp" -Force -Recurse -ErrorAction SilentlyContinue
-	If (!(Test-Path "HKCR:")) {New-PSDrive -Name HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT | Out-Null}
-	Remove-Item -Path "HKCR:\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" -Recurse -ErrorAction SilentlyContinue
-	Remove-Item -Path "HKCR:\Wow6432Node\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" -Recurse -ErrorAction SilentlyContinue
+	# "If (!(Test-Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive")){
+		# "New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive" | Out-Null}
+	# "Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive" -Name "DisableFileSyncNGSC" -Type DWord -Value 1
 	
-	Write-Host "$MyCommand Completed" -ForegroundColor DarkGreen
-	Write-Log $LogFile "$MyCommand Completed"
+	# "Write-Host "Uninstalling OneDrive..." -ForegroundColor DarkGreen
+	# "Write-Log $LogFile "Uninstalling OneDrive"
+	
+	# "Stop-Process -Name "OneDrive" -ErrorAction SilentlyContinue
+	# "Start-Sleep -s 2
+	# "$onedrive = "$env:SYSTEMROOT\SysWOW64\OneDriveSetup.exe"
+	# "If (!(Test-Path $onedrive)) {$onedrive = "$env:SYSTEMROOT\System32\OneDriveSetup.exe"}
+	# "Start-Process $onedrive "/uninstall" -NoNewWindow -Wait
+	# "Start-Sleep -s 2
+	# "Stop-Process -Name "explorer" -ErrorAction SilentlyContinue
+	# "Start-Sleep -s 2
+	# "Remove-Item -Path "$env:USERPROFILE\OneDrive" -Force -Recurse -ErrorAction SilentlyContinue
+	# "Remove-Item -Path "$env:LOCALAPPDATA\Microsoft\OneDrive" -Force -Recurse -ErrorAction SilentlyContinue
+	# "Remove-Item -Path "$env:PROGRAMDATA\Microsoft OneDrive" -Force -Recurse -ErrorAction SilentlyContinue
+	# "Remove-Item -Path "$env:SYSTEMDRIVE\OneDriveTemp" -Force -Recurse -ErrorAction SilentlyContinue
+	# "If (!(Test-Path "HKCR:")) {New-PSDrive -Name HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT | Out-Null}
+	# "Remove-Item -Path "HKCR:\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" -Recurse -ErrorAction SilentlyContinue
+	# "Remove-Item -Path "HKCR:\Wow6432Node\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" -Recurse -ErrorAction SilentlyContinue
+	
+	# "Write-Host "$MyCommand Completed" -ForegroundColor DarkGreen
+	# "Write-Log $LogFile "$MyCommand Completed"
+	
+	$currErrorActionPreference = $ErrorActionPreference
+	$ErrorActionPreference = 'Stop'
+	ForEach ($cmd in $cmds) {
+		If ($cmd -notlike "Write-*"){Write-Line -Message " $cmd" -LogPath $LogFile -Output $False}
+		try {
+			Invoke-Expression $cmd
+		}
+		catch {
+			Write-Line -Message "  [ERROR] $($_.Exception.Message)" -LogPath $LogFile -ForegroundColor Red -BackgroundColor Black
+			$cmdError=$True
+		}
+		If ((!($cmdError)) -and ($cmd -notlike "Write-*")) {Write-Line -Message "  Success" -LogPath $LogFile -Output $False}
+		Clear-Variable cmdError -ErrorAction SilentlyContinue
+	}
+	$ErrorActionPreference = $currErrorActionPreference
+
+	Write-Line -Message " $MyCommand Completed" -LogPath $LogFile -ForegroundColor DarkCyan
 }
 
 function Set-WindowsExplorerView {
 	Param ([bool]$Confirm)
 	
-	[string]$MyCommand=$($MyInvocation.MyCommand)
-	Write-Progress -Activity "Setting Up Windows Environment" -Status "$MyCommand"
-	Write-Host ""
-	Write-Host "$MyCommand" -ForegroundColor Green
-	Write-Log $LogFile "$MyCommand"
+	Write-Line ""
+	$MyCommand=$($MyInvocation.MyCommand)
+	Write-Line -Message "$MyCommand" -LogPath $LogFile -ForegroundColor Cyan
 	
 	If ($Confirm) {
 		$Proceed=$False
@@ -770,62 +836,103 @@ function Set-WindowsExplorerView {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Log $LogFile "$($MyInvocation.MyCommand) Skipped"
+		Write-Line -Message "$MyCommand Skipped" -LogPath $LogFile -ForegroundColor Yellow
 		return
 	}
 	
-	Write-Host "Show Hidden Items and File Extensions" -ForegroundColor DarkGreen
-	Write-Log $LogFile "Show Hidden Items and File Extensions"
-	Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Hidden" -Type DWord -Value 1
-	Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "HideFileExt" -Type DWord -Value 0
-	
-	Write-Host "Hiding People icon..." -ForegroundColor DarkGreen
-	Write-Log $LogFile "Hiding People icon"
-	If (!(Test-Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\People")) {New-Item -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\People" | Out-Null}
-	Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\People" -Name "PeopleBand" -Type DWord -Value 0
-    
-	Write-Host "Showing all tray icons..." -ForegroundColor DarkGreen
-	Write-Log $LogFile "Showing all tray icons..."
-	Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "EnableAutoTray" -Type DWord -Value 0
-	
-	Write-Host "Showing Search icon..." -ForegroundColor DarkGreen
-	Write-Log $LogFile "Showing Search icon..."
-	Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Search" -Name "SearchboxTaskbarMode" -Type DWord -Value 1
-	
-	Write-Host "Setting Desktop to Dark Gray..." -ForegroundColor DarkGreen
-	Write-Log $LogFile "Setting Desktop to Dark Gray..."
-	Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name 'WallPaper' -Value ''
-	Set-ItemProperty -Path 'HKCU:\Control Panel\Colors' -Name 'Background' -Value '76 74 72'
-	
-	Write-Host "Removing Microsoft Store icon..." -ForegroundColor DarkGreen
-	Write-Log $LogFile "Removing Microsoft Store icon..."
-	$appname = "Microsoft Store"
-	((New-Object -Com Shell.Application).NameSpace('shell:::{4234d49b-0245-4df3-b780-3893943456e1}').Items() | ?{$_.Name -eq $appname}).Verbs() | ?{$_.Name.replace('&','') -match 'Unpin from taskbar'} | %{$_.DoIt(); $exec = $true}
-	
-	Write-Host "Disable Shake to Minimize" -ForegroundColor DarkGreen
-	Set-ItemProperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name DisallowShaking -Value 1
-	
-	If (isWindows11) {
-		Write-Host "Hiding Chat Icon" -ForegroundColor DarkGreen
-		Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarMn" -Type DWord -Value 0
+	$cmds=@(
+		"Write-Host 'Show Hidden Items and File Extensions' -ForegroundColor DarkCyan",
+		"Set-ItemProperty -Path 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -Name 'Hidden' -Type DWord -Value 1",
+		"Set-ItemProperty -Path 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -Name 'HideFileExt' -Type DWord -Value 0",
+		"Write-Host 'Hiding People icon...' -ForegroundColor DarkCyan",
+		"New-Item -Path 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\People' -ErrorAction SilentlyContinue | Out-Null",
+		"Set-ItemProperty -Path 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\People' -Name 'PeopleBand' -Type DWord -Value 0",
+		"Write-Host 'Showing all tray icons...' -ForegroundColor DarkCyan",
+		"Set-ItemProperty -Path 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer' -Name 'EnableAutoTray' -Type DWord -Value 0",
+		"Write-Host 'Showing Search icon...' -ForegroundColor DarkCyan",
+		"Set-ItemProperty -Path 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Search' -Name 'SearchboxTaskbarMode' -Type DWord -Value 1",
+		"Write-Host 'Setting Desktop to Dark Gray...' -ForegroundColor DarkCyan",
+		"Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name 'WallPaper' -Value ''",
+		"Set-ItemProperty -Path 'HKCU:\Control Panel\Colors' -Name 'Background' -Value '76 74 72'",
+		"Write-Host 'Removing Microsoft Store icon...' -ForegroundColor DarkCyan",
+		"((New-Object -Com Shell.Application).NameSpace('shell:::{4234d49b-0245-4df3-b780-3893943456e1}').Items() | ?{`$_.Name -eq 'Microsoft Store'}).Verbs() | ?{`$_.Name.replace('&','') -match 'Unpin from taskbar'} | %{`$_.DoIt(); `$exec = `$true}",
+		"Write-Host 'Disable Shake to Minimize' -ForegroundColor DarkCyan",
+		"Set-ItemProperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name DisallowShaking -Value 1",
+		"Write-Host 'Enabling Dark Mode' -ForegroundColor DarkCyan",
+		"Set-ItemProperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize -Name AppsUseLightTheme -Value 0"
+	)
+	if (isWindows11) {
+		$cmds+="Write-Host 'Hiding Chat Icon' -ForegroundColor DarkCyan"
+		$cmds+="Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -Name 'TaskbarMn' -Type DWord -Value 0"
 	}
 	
-	Write-Host "Enabling Dark Mode" -ForegroundColor DarkGreen
-	Set-ItemProperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize -Name AppsUseLightTheme -Value 0
+	# "Write-Host "Show Hidden Items and File Extensions" -ForegroundColor DarkGreen
+	# "Write-Log $LogFile "Show Hidden Items and File Extensions"
+	# "Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Hidden" -Type DWord -Value 1
+	# "Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "HideFileExt" -Type DWord -Value 0
 	
+	# "Write-Host "Hiding People icon..." -ForegroundColor DarkGreen
+	# "Write-Log $LogFile "Hiding People icon"
+	# "If (!(Test-Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\People")) {New-Item -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\People" | Out-Null}
+	# "Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\People" -Name "PeopleBand" -Type DWord -Value 0
+    
+	# "Write-Host "Showing all tray icons..." -ForegroundColor DarkGreen
+	# "Write-Log $LogFile "Showing all tray icons..."
+	# "Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "EnableAutoTray" -Type DWord -Value 0
 	
-	Write-Host "$MyCommand Completed" -ForegroundColor DarkGreen
-	Write-Log $LogFile "$MyCommand Completed"
+	# "Write-Host "Showing Search icon..." -ForegroundColor DarkGreen
+	# "Write-Log $LogFile "Showing Search icon..."
+	# "Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Search" -Name "SearchboxTaskbarMode" -Type DWord -Value 1
+	
+	# "Write-Host "Setting Desktop to Dark Gray..." -ForegroundColor DarkGreen
+	# "Write-Log $LogFile "Setting Desktop to Dark Gray..."
+	# "Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name 'WallPaper' -Value ''
+	# "Set-ItemProperty -Path 'HKCU:\Control Panel\Colors' -Name 'Background' -Value '76 74 72'
+	
+	# "Write-Host "Removing Microsoft Store icon..." -ForegroundColor DarkGreen
+	# "Write-Log $LogFile "Removing Microsoft Store icon..."
+	# "$appname = "Microsoft Store"
+	# "((New-Object -Com Shell.Application).NameSpace('shell:::{4234d49b-0245-4df3-b780-3893943456e1}').Items() | ?{$_.Name -eq $appname}).Verbs() | ?{$_.Name.replace('&','') -match 'Unpin from taskbar'} | %{$_.DoIt(); $exec = $true}
+	
+	# "Write-Host "Disable Shake to Minimize" -ForegroundColor DarkGreen
+	# "Set-ItemProperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name DisallowShaking -Value 1
+	
+	# "If (isWindows11) {
+		# "Write-Host "Hiding Chat Icon" -ForegroundColor DarkGreen
+		# "Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarMn" -Type DWord -Value 0
+	# "}
+	
+	# "Write-Host "Enabling Dark Mode" -ForegroundColor DarkGreen
+	# "Set-ItemProperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize -Name AppsUseLightTheme -Value 0
+	
+	# "Write-Host "$MyCommand Completed" -ForegroundColor DarkGreen
+	# "Write-Log $LogFile "$MyCommand Completed"
+	
+	$currErrorActionPreference = $ErrorActionPreference
+	$ErrorActionPreference = 'Stop'
+	ForEach ($cmd in $cmds) {
+		If ($cmd -notlike "Write-*"){Write-Line -Message " $cmd" -LogPath $LogFile -Output $False}
+		try {
+			Invoke-Expression $cmd
+		}
+		catch {
+			Write-Line -Message "  [ERROR] $($_.Exception.Message)" -LogPath $LogFile -ForegroundColor Red -BackgroundColor Black
+			$cmdError=$True
+		}
+		If ((!($cmdError)) -and ($cmd -notlike "Write-*")) {Write-Line -Message "  Success" -LogPath $LogFile -Output $False}
+		Clear-Variable cmdError -ErrorAction SilentlyContinue
+	}
+	$ErrorActionPreference = $currErrorActionPreference
+
+	Write-Line -Message " $MyCommand Completed" -LogPath $LogFile -ForegroundColor DarkCyan
 }
 
 function Disable-CapsLock {
 	Param ([bool]$Confirm)
 	
-	[string]$MyCommand=$($MyInvocation.MyCommand)
-	Write-Progress -Activity "Setting Up Windows Environment" -Status "$MyCommand"
-	Write-Host ""
-	Write-Host "$MyCommand" -ForegroundColor Green
-	Write-Log $LogFile "$MyCommand"
+	Write-Line ""
+	$MyCommand=$($MyInvocation.MyCommand)
+	Write-Line -Message "$MyCommand" -LogPath $LogFile -ForegroundColor Cyan
 	
 	If ($Confirm) {
 		$Proceed=$False
@@ -840,31 +947,46 @@ function Disable-CapsLock {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Host "$MyCommand Skipped" 
-		Write-Log $LogFile "$MyCommand Skipped"
+		Write-Line -Message "$MyCommand Skipped" -LogPath $LogFile -ForegroundColor Yellow
 		return
 	}
 	
 	$hexified = "00,00,00,00,00,00,00,00,02,00,00,00,2a,00,3a,00,00,00,00,00".Split(',') | % { "0x$_"}
 	$kbLayout = 'HKLM:\System\CurrentControlSet\Control\Keyboard Layout'
 	$keyName = "Scancode Map"
-	if (!(Get-ItemProperty -Path $kbLayout -Name $keyName -ErrorAction SilentlyContinue)){
-		New-ItemProperty -Path $kbLayout -Name $keyName -PropertyType Binary -Value ([byte[]]$hexified)
-	}
 	
-	Write-Host "$MyCommand Completed" -ForegroundColor DarkGreen
-	Write-Log $LogFile "$MyCommand Completed"
+	$cmds=@(
+		"If (!(Get-ItemProperty -Path `$kbLayout -Name `$keyName -ErrorAction SilentlyContinue)){New-ItemProperty -Path `$kbLayout -Name `$keyName -PropertyType Binary -Value ([byte[]]`$hexified)}"
+	)
+	
+	#If (!(Get-ItemProperty -Path $kbLayout -Name $keyName -ErrorAction SilentlyContinue)){New-ItemProperty -Path $kbLayout -Name $keyName -PropertyType Binary -Value ([byte[]]$hexified)}
+	
+	$currErrorActionPreference = $ErrorActionPreference
+	$ErrorActionPreference = 'Stop'
+	ForEach ($cmd in $cmds) {
+		If ($cmd -notlike "Write-*"){Write-Line -Message " $cmd" -LogPath $LogFile -Output $False}
+		try {
+			Invoke-Expression $cmd
+		}
+		catch {
+			Write-Line -Message "  [ERROR] $($_.Exception.Message)" -LogPath $LogFile -ForegroundColor Red -BackgroundColor Black
+			$cmdError=$True
+		}
+		If ((!($cmdError)) -and ($cmd -notlike "Write-*")) {Write-Line -Message "  Success" -LogPath $LogFile -Output $False}
+		Clear-Variable cmdError -ErrorAction SilentlyContinue
+	}
+	$ErrorActionPreference = $currErrorActionPreference
+
+	Write-Line -Message " $MyCommand Completed" -LogPath $LogFile -ForegroundColor DarkCyan
 }
 
 function Enable-RDP {
 	Param ([bool]$Confirm)
 	
 	##Needs to be reworked
-	[string]$MyCommand=$($MyInvocation.MyCommand)
-	Write-Progress -Activity "Setting Up Windows Environment" -Status "$MyCommand"
-	Write-Host ""
-	Write-Host "$MyCommand" -ForegroundColor Green
-	Write-Log $LogFile "$MyCommand"
+	Write-Line ""
+	$MyCommand=$($MyInvocation.MyCommand)
+	Write-Line -Message "$MyCommand" -LogPath $LogFile -ForegroundColor Cyan
 		
 	Write-Host "Remote Desktop Connection is a way to access a this computer's" -ForegroundColor Yellow
 	Write-Host " desktop from another computer in order to run applications" -ForegroundColor Yellow
@@ -875,17 +997,22 @@ function Enable-RDP {
 		2 {$enableRDP=$False}
 	}
 	
+	$installScript=((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/awurthmann/Set-RDP-Connection/main/Set-RDP-Connection.ps1'))
+	$ScriptBlock = [System.Management.Automation.ScriptBlock]::Create($installScript)
+	
 	If($enableRDP){
-		Write-Progress -Activity "Setting Up Windows Environment" -Status "Enable-RDP"
-		Write-Host "Enabling Remote Desktop Connection..." -ForegroundColor Green
-		$installScript=((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/awurthmann/Set-RDP-Connection/main/Set-RDP-Connection.ps1'))
-		$ScriptBlock = [System.Management.Automation.ScriptBlock]::Create($installScript)
+		
+		Write-Line -Message "Enabling Remote Desktop Connection" -LogPath $LogFile -ForegroundColor DarkCyan
+		#Write-Progress -Activity "Setting Up Windows Environment" -Status "Enable-RDP"
+		#Write-Host "Enabling Remote Desktop Connection..." -ForegroundColor Green
+		#$installScript=((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/awurthmann/Set-RDP-Connection/main/Set-RDP-Connection.ps1'))
+		#$ScriptBlock = [System.Management.Automation.ScriptBlock]::Create($installScript)
 		$ScriptArgs=@($False,$True)
-		Invoke-Command $ScriptBlock -ArgumentList $ScriptArgs
+		#Invoke-Command $ScriptBlock -ArgumentList $ScriptArgs
 	}
 	Else {
 		Write-Host ""
-		$msg="Do you want to Disable RDP, [Y]Yes, [N]No"
+		$msg="Do you want to explicitly Disable RDP, [Y]Yes, [N]No"
 		choice /c yn /m $msg
 		switch ($LASTEXITCODE){
 			1 {$disableRDP=$True}
@@ -893,25 +1020,46 @@ function Enable-RDP {
 		}
 		
 		If($disableRDP){
-			Write-Progress -Activity "Setting Up Windows Environment" -Status "Enable-RDP"
-			Write-Host "Disabling Remote Desktop Connection..." -ForegroundColor Green
-			$installScript=((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/awurthmann/Set-RDP-Connection/main/Set-RDP-Connection.ps1'))
-			$ScriptBlock = [System.Management.Automation.ScriptBlock]::Create($installScript)
+			Write-Line -Message "Disabling Remote Desktop Connection" -LogPath $LogFile -ForegroundColor DarkCyan
+			#Write-Progress -Activity "Setting Up Windows Environment" -Status "Enable-RDP"
+			#Write-Host "Disabling Remote Desktop Connection..." -ForegroundColor Green
+			#$installScript=((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/awurthmann/Set-RDP-Connection/main/Set-RDP-Connection.ps1'))
+			#$ScriptBlock = [System.Management.Automation.ScriptBlock]::Create($installScript)
 			$ScriptArgs=@($False,$False)
-			Invoke-Command $ScriptBlock -ArgumentList $ScriptArgs	
+			#Invoke-Command $ScriptBlock -ArgumentList $ScriptArgs	
 		}
 	}
-	Write-Log $LogFile "$($MyInvocation.MyCommand) Completed"
+	
+	If ($ScriptArgs){
+		$currErrorActionPreference = $ErrorActionPreference
+		$ErrorActionPreference = 'Stop'
+		Write-Line -Message " Invoke-Command $ScriptBlock -ArgumentList $ScriptArgs" -LogPath $LogFile -Output $False
+		try {
+			Invoke-Command $ScriptBlock -ArgumentList $ScriptArgs	
+		}
+		catch {
+			Write-Line -Message "  [ERROR] $($_.Exception.Message)" -LogPath $LogFile -ForegroundColor Red -BackgroundColor Black
+			$cmdError=$True
+		}
+		If (!($cmdError)) {Write-Line -Message "  Success" -LogPath $LogFile -Output $False}
+		Clear-Variable cmdError -ErrorAction SilentlyContinue
+
+		$ErrorActionPreference = $currErrorActionPreference
+
+		Write-Line -Message " $MyCommand Completed" -LogPath $LogFile -ForegroundColor DarkCyan
+	}
+	Else{
+		Write-Line -Message "$MyCommand Skipped" -LogPath $LogFile -ForegroundColor Yellow
+	}
 }
+
 
 function Install-Choco {
 	Param ([bool]$Confirm)
 	
-	[string]$MyCommand=$($MyInvocation.MyCommand)
-	Write-Progress -Activity "Setting Up Windows Environment" -Status "$MyCommand"
-	Write-Host ""
-	Write-Host "$MyCommand" -ForegroundColor Green
-	Write-Log $LogFile "$MyCommand"
+	Write-Line ""
+	$MyCommand=$($MyInvocation.MyCommand)
+	Write-Line -Message "$MyCommand" -LogPath $LogFile -ForegroundColor Cyan
 	
 	If ($Confirm) {
 		$Proceed=$False
@@ -934,13 +1082,59 @@ function Install-Choco {
 		}
 	}
 	Else {$Proceed=$True}
-	If (!($Proceed)){Write-Log $LogFile "$($MyInvocation.MyCommand) Skipped";return}
+	If (!($Proceed)){
+		Write-Line -Message "$MyCommand Skipped" -LogPath $LogFile -ForegroundColor Yellow
+		return
+	}
 	
-	Set-ExecutionPolicy Bypass -Scope Process -Force
-	[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-	iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-	Write-Log $LogFile "$($MyInvocation.MyCommand) Completed"
+	
+	$cmds=@(
+		"Set-ExecutionPolicy Bypass -Scope Process -Force",
+		"[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072",
+		"iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))"
+	)
+	
+	$currErrorActionPreference = $ErrorActionPreference
+	$ErrorActionPreference = 'Stop'
+	ForEach ($cmd in $cmds) {
+		If ($cmd -notlike "Write-*"){Write-Line -Message " $cmd" -LogPath $LogFile -Output $False}
+		try {
+			Invoke-Expression $cmd
+		}
+		catch {
+			Write-Line -Message "  [ERROR] $($_.Exception.Message)" -LogPath $LogFile -ForegroundColor Red -BackgroundColor Black
+			$cmdError=$True
+		}
+		If ((!($cmdError)) -and ($cmd -notlike "Write-*")) {Write-Line -Message "  Success" -LogPath $LogFile -Output $False}
+		Clear-Variable cmdError -ErrorAction SilentlyContinue
+	}
+	$ErrorActionPreference = $currErrorActionPreference
+
+	Write-Line -Message " $MyCommand Completed" -LogPath $LogFile -ForegroundColor DarkCyan
+	
+	#Set-ExecutionPolicy Bypass -Scope Process -Force
+	#[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+	
+	
+	#$currErrorActionPreference = $ErrorActionPreference
+	#$ErrorActionPreference = 'Stop'
+	#Write-Line -Message " iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))" -LogPath $LogFile -Output $False
+	#try {
+	#	iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+	#}
+	#catch {
+	#	Write-Line -Message "  [ERROR] $($_.Exception.Message)" -LogPath $LogFile -ForegroundColor Red -BackgroundColor Black
+	#	$cmdError=$True
+	#}
+	#If (!($cmdError)) {Write-Line -Message "  Success" -LogPath $LogFile -Output $False}
+	#Clear-Variable cmdError -ErrorAction SilentlyContinue
+	#$ErrorActionPreference = $currErrorActionPreference
+
+	#Write-Line -Message " $MyCommand Completed" -LogPath $LogFile -ForegroundColor DarkCyan
 }
+
+
+#### New Logging Stopped Here ****
 
 function Install-BaseApps {
 	Param ([bool]$Confirm)
@@ -995,84 +1189,84 @@ function Install-BaseApps {
 }
 
 ##Not Added Yet - Uses winget is not included with Windows 11 Yet
-# function Install-Sysinternals {
-	# Param ([bool]$Confirm)
+# "function Install-Sysinternals {
+	# "Param ([bool]$Confirm)
 	
-	# If (Test-Path "$([Environment]::GetFolderPath('LocalApplicationData'))\Microsoft\WindowsApps\autoruns.exe"){return}
+	# "If (Test-Path "$([Environment]::GetFolderPath('LocalApplicationData'))\Microsoft\WindowsApps\autoruns.exe"){return}
 	
-	# [string]$MyCommand=$($MyInvocation.MyCommand)
-	# Write-Progress -Activity "Setting Up Windows Environment" -Status "$MyCommand"
-	# Write-Host ""
-	# Write-Host "$MyCommand" -ForegroundColor Green
-	# Write-Log $LogFile "$MyCommand"
+	# "[string]$MyCommand=$($MyInvocation.MyCommand)
+	# "Write-Progress -Activity "Setting Up Windows Environment" -Status "$MyCommand"
+	# "Write-Host ""
+	# "Write-Host "$MyCommand" -ForegroundColor Green
+	# "Write-Log $LogFile "$MyCommand"
 	
-	# If ($Confirm){
-		# Write-Host "Sysinternals Suite is a bundle of the utilities including: Process Explorer," -ForegroundColor Yellow
-		# Write-Host "Process Monitor, Sysmon, Autoruns, all of the PsTools, and many more" -ForegroundColor Yellow
-		# Write-Host -NoNewLine "Read More: " -ForegroundColor Yellow
-		# Write-Host "https://www.sysinternals.com" -ForegroundColor Blue
-		# Write-Host ""
-		# $msg="Do you want to install Microsoft's Sysinernals, [Y]Yes, [N]No"
-		# choice /c yn /m $msg
-		# switch ($LASTEXITCODE){
-			# 1 {$Proceed=$True}
-			# 2 {$Proceed=$False}
-		# }
-	# }
-	# Else {$Proceed=$True}
-	# If (!($Proceed)){
-		# Write-Host "$MyCommand Skipped" 
-		# Write-Log $LogFile "$MyCommand Skipped"
-		# return
-	# }
+	# "If ($Confirm){
+		# "Write-Host "Sysinternals Suite is a bundle of the utilities including: Process Explorer," -ForegroundColor Yellow
+		# "Write-Host "Process Monitor, Sysmon, Autoruns, all of the PsTools, and many more" -ForegroundColor Yellow
+		# "Write-Host -NoNewLine "Read More: " -ForegroundColor Yellow
+		# "Write-Host "https://www.sysinternals.com" -ForegroundColor Blue
+		# "Write-Host ""
+		# "$msg="Do you want to install Microsoft's Sysinernals, [Y]Yes, [N]No"
+		# "choice /c yn /m $msg
+		# "switch ($LASTEXITCODE){
+			# "1 {$Proceed=$True}
+			# "2 {$Proceed=$False}
+		# "}
+	# "}
+	# "Else {$Proceed=$True}
+	# "If (!($Proceed)){
+		# "Write-Host "$MyCommand Skipped" 
+		# "Write-Log $LogFile "$MyCommand Skipped"
+		# "return
+	# "}
 
-	# Write-Host "Attempting to install 'sysinternals' via 'winget'" -ForegroundColor DarkGreen
-	# Write-Log $LogFile "Attempting to install 'sysinternals' via 'winget'"
+	# "Write-Host "Attempting to install 'sysinternals' via 'winget'" -ForegroundColor DarkGreen
+	# "Write-Log $LogFile "Attempting to install 'sysinternals' via 'winget'"
 
-	# winget install sysinternals
+	# "winget install sysinternals
 
-	# Write-Host "$MyCommand Completed" -ForegroundColor DarkGreen
-	# Write-Log $LogFile "$MyCommand Completed"
-# }
+	# "Write-Host "$MyCommand Completed" -ForegroundColor DarkGreen
+	# "Write-Log $LogFile "$MyCommand Completed"
+# "}
 
-# function Install-PowerToys {
-	# Param ([bool]$Confirm)
+# "function Install-PowerToys {
+	# "Param ([bool]$Confirm)
 	
-	# If (Test-Path "$([Environment]::GetFolderPath('LocalApplicationData'))\Microsoft\WindowsApps\autoruns.exe"){return}
+	# "If (Test-Path "$([Environment]::GetFolderPath('LocalApplicationData'))\Microsoft\WindowsApps\autoruns.exe"){return}
 	
-	# [string]$MyCommand=$($MyInvocation.MyCommand)
-	# Write-Progress -Activity "Setting Up Windows Environment" -Status "$MyCommand"
-	# Write-Host ""
-	# Write-Host "$MyCommand" -ForegroundColor Green
-	# Write-Log $LogFile "$MyCommand"
+	# "[string]$MyCommand=$($MyInvocation.MyCommand)
+	# "Write-Progress -Activity "Setting Up Windows Environment" -Status "$MyCommand"
+	# "Write-Host ""
+	# "Write-Host "$MyCommand" -ForegroundColor Green
+	# "Write-Log $LogFile "$MyCommand"
 	
-	# If ($Confirm){
-		# Write-Host "Microsoft PowerToys is a set of utilities for power users to tune and streamline their Windows experience for greater productivity." -ForegroundColor Yellow
-		# Write-Host -NoNewLine "Read More: " -ForegroundColor Yellow
-		# Write-Host "https://docs.microsoft.com/en-us/windows/powertoys/" -ForegroundColor Blue
-		# Write-Host ""
-		# $msg="Do you want to install Microsoft's PowerToys, [Y]Yes, [N]No"
-		# choice /c yn /m $msg
-		# switch ($LASTEXITCODE){
-			# 1 {$Proceed=$True}
-			# 2 {$Proceed=$False}
-		# }
-	# }
-	# Else {$Proceed=$True}
-	# If (!($Proceed)){
-		# Write-Host "$MyCommand Skipped" 
-		# Write-Log $LogFile "$MyCommand Skipped"
-		# return
-	# }
+	# "If ($Confirm){
+		# "Write-Host "Microsoft PowerToys is a set of utilities for power users to tune and streamline their Windows experience for greater productivity." -ForegroundColor Yellow
+		# "Write-Host -NoNewLine "Read More: " -ForegroundColor Yellow
+		# "Write-Host "https://docs.microsoft.com/en-us/windows/powertoys/" -ForegroundColor Blue
+		# "Write-Host ""
+		# "$msg="Do you want to install Microsoft's PowerToys, [Y]Yes, [N]No"
+		# "choice /c yn /m $msg
+		# "switch ($LASTEXITCODE){
+			# "1 {$Proceed=$True}
+			# "2 {$Proceed=$False}
+		# "}
+	# "}
+	# "Else {$Proceed=$True}
+	# "If (!($Proceed)){
+		# "Write-Host "$MyCommand Skipped" 
+		# "Write-Log $LogFile "$MyCommand Skipped"
+		# "return
+	# "}
 
-	# Write-Host "Attempting to install 'powertoys' via 'winget'" -ForegroundColor DarkGreen
-	# Write-Log $LogFile "Attempting to install 'powertoys' via 'winget'"
+	# "Write-Host "Attempting to install 'powertoys' via 'winget'" -ForegroundColor DarkGreen
+	# "Write-Log $LogFile "Attempting to install 'powertoys' via 'winget'"
 
-	# winget install powertoys
+	# "winget install powertoys
 
-	# Write-Host "$MyCommand Completed" -ForegroundColor DarkGreen
-	# Write-Log $LogFile "$MyCommand Completed"
-# }
+	# "Write-Host "$MyCommand Completed" -ForegroundColor DarkGreen
+	# "Write-Log $LogFile "$MyCommand Completed"
+# "}
 ##Not Added Yet
 
 function Install-WindowsFirewallControl {
@@ -1203,8 +1397,8 @@ function Remove-UnwantedApps {
 	    "Microsoft.BingSports"
 	    "Microsoft.BingTranslator"
 	    "Microsoft.BingWeather"
-        # "Microsoft.GetHelp"
-        # "Microsoft.Getstarted"
+        # ""Microsoft.GetHelp"
+        # ""Microsoft.Getstarted"
         "Microsoft.Messaging"
         "Microsoft.Microsoft3DViewer"
 		"Microsoft.MicrosoftOfficeHub"
@@ -1218,10 +1412,10 @@ function Remove-UnwantedApps {
         "Microsoft.People"
         "Microsoft.Print3D"
         "Microsoft.SkypeApp"
-        # "Microsoft.StorePurchaseApp"
+        # ""Microsoft.StorePurchaseApp"
 		"MicrosoftTeams*"
         "Microsoft.Wallet"
-        # "Microsoft.Whiteboard"
+        # ""Microsoft.Whiteboard"
         "Microsoft.WindowsAlarms"
         "microsoft.windowscommunicationsapps"
         "Microsoft.WindowsFeedbackHub"
@@ -1248,7 +1442,7 @@ function Remove-UnwantedApps {
         "*Sway*"
 		"*Spotify*"
         "*Speed Test*"
-        # "*Dolby*"
+        # ""*Dolby*"
         "*Viber*"
         "*ACGMediaPlayer*"
         "*Netflix*"
@@ -1539,6 +1733,7 @@ function Set-SecuritySettings {
 		Write-Host "Disable Windows Script Host, Enable Meltdown Compatibility Flag" -ForegroundColor Yellow
 		Write-Host "Block All Incoming Traffic & Explicitly Block Incoming Traffic for WiFi Adapters" -ForegroundColor Yellow
 		Write-Host "Enable Reputation-based Protection, Disable NetBIOS On All Present Adapters" -ForegroundColor Yellow
+		Write-Host "Install Microsoft Defender Application Guard, Opens Microsoft Edge in a Hyper-V isolated browsing environment" -ForegroundColor Yellow
 		Write-Host ""
 		$msg="Do you want to apply all of theses security settings [Y]Yes, [N]No"
 		choice /c yn /m $msg
@@ -1594,6 +1789,9 @@ function Set-SecuritySettings {
 	Get-ChildItem $i | ForEach-Object {  
 		Set-ItemProperty -Path "$i\$($_.pschildname)" -name NetBiosOptions -value 2}
 	(Get-WmiObject Win32_NetworkAdapterConfiguration -Filter IpEnabled="true").SetTcpipNetbios(2) | Out-Null
+	
+	Write-Host "Install Microsoft Defender Application Guard..." -ForegroundColor Green
+	Enable-WindowsOptionalFeature -Online -FeatureName "Windows-Defender-ApplicationGuard"​
 	
 	Write-Host "$MyCommand Completed" -ForegroundColor DarkGreen
 	Write-Log $LogFile "$MyCommand Completed"
@@ -1713,30 +1911,30 @@ function Get-WindowsUpdates {
 }
 
 ###Unused Functions/Features - may re-add later
-# function Encrypt-System {
-	# Param([bool]$Confirm=$False)
+# "function Encrypt-System {
+	# "Param([bool]$Confirm=$False)
 	
-	# Write-Progress -Activity "Setting Up Windows Environment" -Status "Encrypt-System"
+	# "Write-Progress -Activity "Setting Up Windows Environment" -Status "Encrypt-System"
 	
-	# [bool]$Encrypt=$True
-	# If($Confirm){
-		# If((gwmi win32_computersystem -ea 0).pcsystemtype -ne 2){#If Desktop then prompt
-			# Write-Host ""
-			# $msg="Do you want to encrypt this desktop system, [Y]Yes, [N]No"
-			# choice /c yn /m $msg
-			# switch ($LASTEXITCODE){
-				# 1 {$Encrypt=$True;break}
-				# 2 {$Encrypt=$False;break}
-			# }
-		# }
-	# }
+	# "[bool]$Encrypt=$True
+	# "If($Confirm){
+		# "If((gwmi win32_computersystem -ea 0).pcsystemtype -ne 2){#If Desktop then prompt
+			# "Write-Host ""
+			# "$msg="Do you want to encrypt this desktop system, [Y]Yes, [N]No"
+			# "choice /c yn /m $msg
+			# "switch ($LASTEXITCODE){
+				# "1 {$Encrypt=$True;break}
+				# "2 {$Encrypt=$False;break}
+			# "}
+		# "}
+	# "}
 	
-	# If ($Encrypt){
-		# $SystemDrive=[Environment]::GetEnvironmentVariable("SystemDrive")
-		# Enable-BitLocker -MountPoint $SystemDrive -EncryptionMethod Aes256 -UsedSpaceOnly -TpmProtector
+	# "If ($Encrypt){
+		# "$SystemDrive=[Environment]::GetEnvironmentVariable("SystemDrive")
+		# "Enable-BitLocker -MountPoint $SystemDrive -EncryptionMethod Aes256 -UsedSpaceOnly -TpmProtector
 		##Lock-BitLocker -MountPoint $SystemDrive
-	# }
-# }
+	# "}
+# "}
 ###End Unused Functions/Features - may re-add later
 
 function Rename-System {
@@ -1781,35 +1979,36 @@ function Rename-System {
 	Write-Progress -Activity "Renaming Computer" -Status "New Name: $NewName"
 	Write-Host "Renaming Computer to $NewName..." -ForegroundColor Green
 	Write-Log $LogFile "Rename Computer to $NewName..."
-	Rename-Computer -NewName $NewName -Restart $False
+	#Rename-Computer -NewName $NewName -Restart $False #This is giving an error that -Restart doesn accept $False
+	Rename-Computer -NewName $NewName -Restart False
 	Write-Host "$MyCommand Completed" -ForegroundColor DarkGreen
 	Write-Log $LogFile "$MyCommand Completed"
-	# Write-Host ""
-	# $msg="Do you want to rename this computer, [Y]Yes, [N]No"
-	# choice /c yn /m $msg
-	# switch ($LASTEXITCODE){
-		# 1 {$rename=$True}
-		# 2 {$rename=$False}
-	# }
+	# "Write-Host ""
+	# "$msg="Do you want to rename this computer, [Y]Yes, [N]No"
+	# "choice /c yn /m $msg
+	# "switch ($LASTEXITCODE){
+		# "1 {$rename=$True}
+		# "2 {$rename=$False}
+	# "}
 	
 	
 	
-	# If($rename){
+	# "If($rename){
 		
-		# $NewName=Read-Host("Enter New Computer Name")
+		# "$NewName=Read-Host("Enter New Computer Name")
 		
-		# If ($NewName){
-			# Rename-Computer -NewName $NewName 
-			# Write-Progress -Activity "Renaming Computer" -Status "New Name: $NewName"
-			# Write-Host "Renaming Computer to $NewName..." -ForegroundColor Green
-		# }
-		# Else{
-			# $rename=$False
-		# }
-	# }
-	# If (!$rename) {
-		# Write-Progress -Activity "Skipping Renaming Computer" -Status "Name: $(hostname)"
-	# }
+		# "If ($NewName){
+			# "Rename-Computer -NewName $NewName 
+			# "Write-Progress -Activity "Renaming Computer" -Status "New Name: $NewName"
+			# "Write-Host "Renaming Computer to $NewName..." -ForegroundColor Green
+		# "}
+		# "Else{
+			# "$rename=$False
+		# "}
+	# "}
+	# "If (!$rename) {
+		# "Write-Progress -Activity "Skipping Renaming Computer" -Status "Name: $(hostname)"
+	# "}
 }
 
 ##Main##
@@ -1823,9 +2022,9 @@ If($localAdmin -and $internetAccess) {
 	$ScriptName=$MyInvocation.MyCommand.Name
 	If (!($ScriptName)){$ScriptName="Setup-WindowsEnvironment.ps1"}
 	
-	# $ScriptPath=Split-Path $($MyInvocation.MyCommand.Path) -Parent -ErrorAction SilentlyContinue
-	# $ScriptName=$MyInvocation.MyCommand.Name
-	# If (!($ScriptName)){$ScriptName="Setup-WindowsEnvironment.ps1"}
+	# "$ScriptPath=Split-Path $($MyInvocation.MyCommand.Path) -Parent -ErrorAction SilentlyContinue
+	# "$ScriptName=$MyInvocation.MyCommand.Name
+	# "If (!($ScriptName)){$ScriptName="Setup-WindowsEnvironment.ps1"}
 	
 	If (!($LogFile)){
 		#If (!($ScriptName)){$ScriptName="Setup-WindowsEnvironment.ps1"}
@@ -1870,7 +2069,7 @@ If($localAdmin -and $internetAccess) {
 	Disable-Cortana $ConfirmDisableCortana
 	Set-WindowsExplorerView $ConfirmSetWindowsExplorerView
 	Remove-Links $ConfirmRemoveLinks
-	# Encrypt-System $ConfirmEncryptDesktop #Not fully functional/Up to par
+	# "Encrypt-System $ConfirmEncryptDesktop #Not fully functional/Up to par
 	Set-RepositorySettings $ConfirmSetRepositorySettings
 	If (isPSGalleryTrusted){ Get-WindowsUpdates $ConfirmGetWindowsUpdates }
 	Rename-System -NewName $NewComputerName

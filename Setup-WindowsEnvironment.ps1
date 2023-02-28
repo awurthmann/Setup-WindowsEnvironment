@@ -13,7 +13,7 @@
 #
 # --------------------------------------------------------------------------------------------
 # Name: Setup-WindowsEnvironment.ps1
-# Version: 2023.02.27.1339
+# Version: 2023.02.27.1647
 # Description: Setup Windows Environment on my Test System(s)
 # 
 # Instructions: Run from PowerShell with Administrator permissions and Set-ExecutionPolicy Bypass -Scope Process -Force
@@ -188,6 +188,11 @@ function Write-Line{
 
 function Create-RestorePoint {
 	
+	If (Get-Content $LogFile | Select-String "$MyCommand Completed with Result: No Error"){
+		Write-Line -Message "$MyCommand Completed with Result: Skipped" -LogPath $LogFile -ForegroundColor DarkGreen
+		return
+	}
+	
 	Write-Line ""
 	$MyCommand=$($MyInvocation.MyCommand)
 	Write-Line -Message "$MyCommand" -LogPath $LogFile -ForegroundColor Cyan
@@ -210,6 +215,11 @@ function Create-RestorePoint {
 function Set-Profile {
 	Param ([bool]$Confirm)
 	
+	If (Get-Content $LogFile | Select-String "$MyCommand Completed with Result: No Error"){
+		Write-Line -Message "$MyCommand Completed with Result: Skipped" -LogPath $LogFile -ForegroundColor DarkGreen
+		return
+	}
+	
 	Write-Line ""
 	$MyCommand=$($MyInvocation.MyCommand)
 	Write-Line -Message "$MyCommand" -LogPath $LogFile -ForegroundColor Cyan
@@ -231,7 +241,7 @@ function Set-Profile {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Line $LogFile "$MyCommand Skipped"
+		Write-Line -Message "$MyCommand Completed with Result: Skipped" -LogPath $LogFile -ForegroundColor Yellow
 		return
 	}
 	
@@ -289,7 +299,7 @@ function Disable-Telemetry {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Line -Message "$MyCommand Skipped" -LogPath $LogFile -ForegroundColor Yellow
+		Write-Line -Message "$MyCommand Completed with Result: Skipped" -LogPath $LogFile -ForegroundColor Yellow
 		return
 	}
 	
@@ -350,7 +360,7 @@ function Disable-ApplicationSuggestions {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Line -Message "$MyCommand Skipped" -LogPath $LogFile -ForegroundColor Yellow
+		Write-Line -Message "$MyCommand Completed with Result: Skipped" -LogPath $LogFile -ForegroundColor Yellow
 		return
 	}
 	
@@ -410,7 +420,7 @@ function Disable-ActivityHistory {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Line -Message "$MyCommand Skipped" -LogPath $LogFile -ForegroundColor Yellow
+		Write-Line -Message "$MyCommand Completed with Result: Skipped" -LogPath $LogFile -ForegroundColor Yellow
 		return
 	}
 	
@@ -462,7 +472,7 @@ function Disable-LocationTracking {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Line -Message "$MyCommand Skipped" -LogPath $LogFile -ForegroundColor Yellow
+		Write-Line -Message "$MyCommand Completed with Result: Skipped" -LogPath $LogFile -ForegroundColor Yellow
 		return
 	}
 	
@@ -519,7 +529,7 @@ function Disable-Feedback {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Line -Message "$MyCommand Skipped" -LogPath $LogFile -ForegroundColor Yellow
+		Write-Line -Message "$MyCommand Completed with Result: Skipped" -LogPath $LogFile -ForegroundColor Yellow
 		return
 	}
 	
@@ -570,7 +580,7 @@ function Disable-AdTargeting {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Line -Message "$MyCommand Skipped" -LogPath $LogFile -ForegroundColor Yellow
+		Write-Line -Message "$MyCommand Completed with Result: Skipped" -LogPath $LogFile -ForegroundColor Yellow
 		return
 	}
 	
@@ -625,7 +635,7 @@ function Disable-WindowsP2PUpdates {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Line -Message "$MyCommand Skipped" -LogPath $LogFile -ForegroundColor Yellow
+		Write-Line -Message "$MyCommand Completed with Result: Skipped" -LogPath $LogFile -ForegroundColor Yellow
 		return
 	}
 	
@@ -681,7 +691,7 @@ function Disable-RemoteAssistance {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Line -Message "$MyCommand Skipped" -LogPath $LogFile -ForegroundColor Yellow
+		Write-Line -Message "$MyCommand Completed with Result: Skipped" -LogPath $LogFile -ForegroundColor Yellow
 		return
 	}
 	
@@ -731,7 +741,7 @@ function Disable-OneDrive {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Line -Message "$MyCommand Skipped" -LogPath $LogFile -ForegroundColor Yellow
+		Write-Line -Message "$MyCommand Completed with Result: Skipped" -LogPath $LogFile -ForegroundColor Yellow
 		return
 	}
 
@@ -836,7 +846,7 @@ function Set-WindowsExplorerView {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Line -Message "$MyCommand Skipped" -LogPath $LogFile -ForegroundColor Yellow
+		Write-Line -Message "$MyCommand Completed with Result: Skipped" -LogPath $LogFile -ForegroundColor Yellow
 		return
 	}
 	
@@ -947,7 +957,7 @@ function Disable-CapsLock {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Line -Message "$MyCommand Skipped" -LogPath $LogFile -ForegroundColor Yellow
+		Write-Line -Message "$MyCommand Completed with Result: Skipped" -LogPath $LogFile -ForegroundColor Yellow
 		return
 	}
 	
@@ -1049,7 +1059,7 @@ function Enable-RDP {
 		Write-Line -Message " $MyCommand Completed" -LogPath $LogFile -ForegroundColor DarkCyan
 	}
 	Else{
-		Write-Line -Message "$MyCommand Skipped" -LogPath $LogFile -ForegroundColor Yellow
+		Write-Line -Message "$MyCommand Completed with Result: Skipped" -LogPath $LogFile -ForegroundColor Yellow
 	}
 }
 
@@ -1083,7 +1093,7 @@ function Install-Choco {
 	}
 	Else {$Proceed=$True}
 	If (!($Proceed)){
-		Write-Line -Message "$MyCommand Skipped" -LogPath $LogFile -ForegroundColor Yellow
+		Write-Line -Message "$MyCommand Completed with Result: Skipped" -LogPath $LogFile -ForegroundColor Yellow
 		return
 	}
 	
@@ -2017,7 +2027,7 @@ $localAdmin=isAdmin
 $internetAccess=isConnectedToInternet
 
 If($localAdmin -and $internetAccess) {
-	Write-Progress -Activity "Setting Up Windows Environment" -Status "Starting"
+	#Write-Progress -Activity "Setting Up Windows Environment" -Status "Starting"
 	
 	$ScriptName=$MyInvocation.MyCommand.Name
 	If (!($ScriptName)){$ScriptName="Setup-WindowsEnvironment.ps1"}
